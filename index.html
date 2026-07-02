@@ -165,7 +165,7 @@
         let farmCount = 0;
         let lumberMillCount = 0;
         let quarryCount = 0;
-        let questCapitalTaps = 0; // Tracks capital taps specifically for the quest
+        let questCapitalTaps = 0; 
 
         let resources = { gold: 0, wood: 60, stone: 10 };
         let incomes = { gold: 0, wood: 0, stone: 0 };
@@ -190,7 +190,7 @@
 
         const COSTS = { 
             road: 15, lane: 20, house: 50, lumbermill: 40, 
-            quarry: 60, goldmine: 100, shipyard: 80, farm: 30, boat: 25,
+            quarry: 30, goldmine: 100, shipyard: 80, farm: 30, boat: 25,
             expand: {g: 100, w: 50, s: 50}, terraform: 50
         };
         const WORKFORCE_COSTS = { lumbermill: 2, quarry: 3, mine: 4, farm: 2, boat: 1, shipyard: 2, road: 0, lane: 0, house: 0 };
@@ -280,6 +280,7 @@
             
             requestAnimationFrame(updateTimerVisual);
             setInterval(gameTick, 10000); 
+            setInterval(autoSaveResources, 30000); // Saves vault automatically every 30 seconds
         });
         
         function updateTimerVisual() {
@@ -299,7 +300,7 @@
                 document.getElementById('login-overlay').style.display = 'none';
                 
                 selectedTile = null; lastAnchorTile = null; harvestData = {};
-                questCapitalTaps = 0; // Reset taps for new user
+                questCapitalTaps = 0; 
                 resources = { gold: 0, wood: 60, stone: 10 };
                 lastTickTime = Date.now(); 
                 
@@ -308,9 +309,25 @@
         }
 
         function logoutUser() {
+            autoSaveResources(); // Save before exiting
             currentUser = "";
             document.getElementById('login-overlay').style.display = 'flex';
             document.getElementById('username-input').value = "";
+        }
+
+        function autoSaveResources() {
+            if (!currentUser) return;
+            let r = capitalPos.row; let c = capitalPos.col;
+            let st = stateGrid[r-1][c-1] || "";
+            
+            st = st.replace(/:BankG\d+W\d+S\d+/g, '');
+            st += `:BankG${Math.floor(resources.gold)}W${Math.floor(resources.wood)}S${Math.floor(resources.stone)}`;
+            
+            stateGrid[r-1][c-1] = st;
+            
+            // Push directly to queue without triggering side effects
+            updateQueue.push({row: r, col: c, value: st});
+            processUpdateQueue();
         }
 
         function centerViewport() {
@@ -379,6 +396,16 @@
                 }
                 document.getElementById('sync-indicator').innerText = "Live Synced.";
                 calculateNetworks();
+                
+                // Extract vault state if it exists
+                let capState = stateGrid[capitalPos.row - 1][capitalPos.col - 1] || "";
+                let bankMatch = capState.match(/:BankG(\d+)W(\d+)S(\d+)/);
+                if (bankMatch) {
+                    resources.gold = parseInt(bankMatch[1]);
+                    resources.wood = parseInt(bankMatch[2]);
+                    resources.stone = parseInt(bankMatch[3]);
+                }
+                
                 centerViewport();
                 renderMap();
                 updateSidebar();
@@ -489,6 +516,9 @@
             
             let fhMatch = st.match(/:FH\d+/);
             if(fhMatch) base += fhMatch[0];
+            
+            let bankMatch = st.match(/:BankG\d+W\d+S\d+/);
+            if(bankMatch) base += bankMatch[0];
             
             return base;
         }
@@ -939,10 +969,10 @@
                     let capMatch = state.match(/:Cap(\d+)/);
                     let currentTier = capMatch ? parseInt(capMatch[1]) : 1;
                     let nextTier = currentTier + 1;
-    
+                    
                     // --- ADJUST YOUR COSTS HERE ---
                     let woodCost = 200 + ((currentTier - 1) * 100);
-                    let stoneCost = 150 + ((currentTier - 1) * 50); // Set your custom stone math here!
+                    let stoneCost = 100 + ((currentTier - 1) * 50); // Set your custom stone math here!
                     // ------------------------------
     
                     let btn = document.createElement('button');
