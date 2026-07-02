@@ -939,18 +939,26 @@
                     let capMatch = state.match(/:Cap(\d+)/);
                     let currentTier = capMatch ? parseInt(capMatch[1]) : 1;
                     let nextTier = currentTier + 1;
-                    let upCost = 200 + ((currentTier - 1) * 100);
+    
+                    // --- ADJUST YOUR COSTS HERE ---
+                    let woodCost = 200 + ((currentTier - 1) * 100);
+                    let stoneCost = 150 + ((currentTier - 1) * 50); // Set your custom stone math here!
+                    // ------------------------------
+    
                     let btn = document.createElement('button');
-                    let wCls = resources.wood < upCost ? 'req-missing' : '';
-                    let sCls = resources.stone < upCost ? 'req-missing' : '';
-                    btn.innerHTML = `Upgrade Capital to Tier ${nextTier} (<span class="${wCls}">${upCost} W</span>, <span class="${sCls}">${upCost} S</span>)`;
-                    btn.disabled = resources.wood < upCost || resources.stone < upCost;
+                    let wCls = resources.wood < woodCost ? 'req-missing' : '';
+                    let sCls = resources.stone < stoneCost ? 'req-missing' : '';
+    
+                    btn.innerHTML = `Upgrade Capital to Tier ${nextTier} (<span class="${wCls}">${woodCost} W</span>, <span class="${sCls}">${stoneCost} S</span>)`;
+                    btn.disabled = resources.wood < woodCost || resources.stone < stoneCost;
+    
                     btn.onclick = () => { 
-                        resources.wood -= upCost; resources.stone -= upCost; 
-                        pushTileUpdate(selectedTile.row, selectedTile.col, `${state.replace(/:Cap\d+/, '')}:Cap${nextTier}`); 
-                    };
-                    actionsContainer.appendChild(btn);
-                }
+                        resources.wood -= woodCost; 
+                        resources.stone -= stoneCost; 
+                    pushTileUpdate(selectedTile.row, selectedTile.col, `${state.replace(/:Cap\d+/, '')}:Cap${nextTier}`); 
+                };
+                actionsContainer.appendChild(btn);
+            }
 
                 if (!builtString && terr !== 'C') {
                     let canAttach = hasBuildingAdjacency(selectedTile.row, selectedTile.col);
