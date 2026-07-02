@@ -2,63 +2,60 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sovereign Realms - Economic Engine</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a24; color: #e2e8f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a24; color: #e2e8f0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; touch-action: none; }
         
-        #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f0f14; display: flex; justify-content: center; align-items: center; flex-direction: column; z-index: 9999; }
-        .login-box { background: #1e1e2a; padding: 40px; border-radius: 10px; border: 2px solid #2d2d3d; text-align: center; width: 350px; }
-        .login-box h1 { color: #f1c40f; margin-bottom: 20px; font-size: 24px; }
+        /* Modals & Overlays */
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 15, 20, 0.85); display: none; justify-content: center; align-items: center; z-index: 9000; }
+        .modal-box { background: #1e1e2a; padding: 25px; border-radius: 10px; border: 2px solid #2d2d3d; text-align: center; width: 90%; max-width: 400px; box-shadow: 0px 0px 20px rgba(0,0,0,0.5); }
+        .modal-box h2 { color: #f1c40f; margin-bottom: 15px; font-size: 20px; text-transform: uppercase;}
+        .modal-box p.narrative { font-style: italic; color: #e2e8f0; font-size: 15px; margin-bottom: 20px; line-height: 1.4; }
+        .modal-box p.goal { font-weight: bold; color: #48bb78; font-size: 16px; margin-bottom: 20px; }
+        .modal-box pre { white-space: pre-wrap; font-family: inherit; text-align: left; font-size: 14px; line-height: 1.5; color: #a0aec0; margin-bottom: 15px; }
+        .modal-btn { width: 100%; padding: 12px; font-size: 16px; background-color: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 10px; }
+        .modal-btn:hover { background-color: #2b6cb0; }
+        .close-btn { background-color: #4a5568 !important; }
+
+        /* Login Specific */
         .login-box input { width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 5px; border: 1px solid #4a5568; background: #14141c; color: white; outline: none; font-size: 16px; text-align: center; }
-        .login-box button { width: 100%; padding: 12px; font-size: 16px; background-color: #3182ce; color: white; border: none; border-radius: 6px; cursor: pointer; }
-        .login-box button:hover { background-color: #2b6cb0; }
 
-        /* Quest Pop-up Overlay */
-        #quest-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 15, 20, 0.85); display: none; justify-content: center; align-items: center; z-index: 9000; }
-        .quest-modal-box { background: #1e1e2a; padding: 40px; border-radius: 10px; border: 2px solid #f1c40f; text-align: center; width: 450px; box-shadow: 0px 0px 20px rgba(241, 196, 15, 0.2); }
-        .quest-modal-box h2 { color: #f1c40f; margin-bottom: 15px; font-size: 22px; text-transform: uppercase;}
-        .quest-modal-box .narrative { font-style: italic; color: #e2e8f0; font-size: 16px; margin-bottom: 25px; line-height: 1.4; }
-        .quest-modal-box .goal { font-weight: bold; color: #48bb78; font-size: 18px; margin-bottom: 25px; }
-        .quest-modal-box button { width: 100%; padding: 12px; font-size: 16px; background-color: #f1c40f; color: #1a1a24; font-weight: bold; cursor: pointer; border: none; border-radius: 6px;}
-        .quest-modal-box button:hover { background-color: #d4ac0d; }
-
-        header { background-color: #111116; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2d2d3d; }
-        .resources { display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
-        .res-item { background: #22222f; padding: 6px 12px; border-radius: 6px; border: 1px solid #3b3b4f; font-weight: bold; font-size: 14px; cursor: help; transition: background 0.2s; display: flex; align-items: center; gap: 4px; }
-        .res-item:hover { background: #2d2d3d; }
+        /* Compact Header */
+        header { background-color: #111116; padding: 8px 10px; display: flex; justify-content: center; border-bottom: 2px solid #2d2d3d; z-index: 100; }
+        .resources { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+        .res-item { background: #22222f; padding: 6px 8px; border-radius: 6px; border: 1px solid #3b3b4f; font-weight: bold; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .res-item:active { background: #2d2d3d; }
         .res-item span { color: #f1c40f; }
-        .res-item .limit { color: #a0aec0; font-size: 12px; font-weight: normal; }
-        .income-text { font-size: 12px; color: #48bb78; margin-left: 2px; }
-        
-        .timer-container { width: 16px; height: 16px; position: relative; margin-left: 6px; transform: rotate(-90deg); }
-        .timer-bg { fill: none; stroke: #2d2d3d; stroke-width: 4; }
-        .timer-fill { fill: none; stroke: #f1c40f; stroke-width: 4; stroke-dasharray: 100 100; stroke-dashoffset: 100; transition: stroke-dashoffset 0.1s linear; }
+        .res-item .limit { color: #a0aec0; font-size: 11px; font-weight: normal; }
 
-        .main-container { display: flex; flex: 1; overflow: hidden; }
-        .map-wrapper { flex: 1; overflow: auto; background: #0f0f14; position: relative; cursor: grab; }
+        /* Main Map Area */
+        .main-container { display: flex; flex: 1; overflow: hidden; position: relative; }
+        .map-wrapper { flex: 1; overflow: auto; background: #0f0f14; position: relative; cursor: grab; touch-action: auto; }
         .map-wrapper:active { cursor: grabbing; }
-        canvas { display: block; }
+        canvas { display: block; transform-origin: top left; } /* Important for zoom math */
         
-        .sidebar { width: 340px; background-color: #14141c; border-left: 2px solid #2d2d3d; padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
-        .panel { background: #1e1e2a; padding: 15px; border-radius: 8px; border: 1px solid #2d2d3d; }
-        h3 { margin-bottom: 10px; color: #a0aec0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;}
-        .tile-details p { margin: 6px 0; font-size: 14px; }
+        /* Floating Action Buttons */
+        .fab-container { position: absolute; top: 15px; right: 15px; display: flex; flex-direction: column; gap: 12px; z-index: 50; }
+        .fab { width: 45px; height: 45px; border-radius: 50%; background: #2d2d3d; border: 2px solid #4a5568; color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.5); cursor: pointer; }
+        .fab:active { transform: scale(0.9); }
+
+        /* Slide-up Bottom Panel */
+        .bottom-panel { position: absolute; bottom: 0; left: 0; width: 100%; background: #14141c; border-top: 2px solid #2d2d3d; padding: 15px; border-radius: 15px 15px 0 0; transform: translateY(110%); transition: transform 0.3s ease-out; max-height: 60vh; overflow-y: auto; z-index: 100; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.5); }
+        .bottom-panel.active { transform: translateY(0); }
+        .bp-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d2d3d; padding-bottom: 8px; margin-bottom: 5px; }
+        .bp-header h3 { color: #a0aec0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin: 0;}
+        .close-bp { background: transparent; border: none; color: #a0aec0; font-size: 18px; cursor: pointer; padding: 5px; }
+        
+        .tile-details p { margin: 4px 0; font-size: 14px; }
         .tile-details span { font-weight: bold; color: #fff; }
         .income-highlight { color: #48bb78 !important; font-weight: bold; }
         
-        .actions-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-        button { background-color: #3182ce; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; font-size: 13px; }
-        button:hover:not(:disabled) { background-color: #2b6cb0; }
-        button:disabled { background-color: #2d3748; cursor: not-allowed; opacity: 0.7; }
+        .actions-list { display: flex; flex-direction: column; gap: 8px; }
+        .actions-list button { background-color: #3182ce; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .actions-list button:disabled { background-color: #2d3748; cursor: not-allowed; opacity: 0.7; }
         .req-missing { color: #fc8181 !important; }
-        
-        .nav-btn { background-color: #4c51bf; width: 100%; margin-top: 5px; padding: 8px; }
-        .nav-btn:hover { background-color: #434190; }
-        .toggle-btn { background-color: #4a5568; }
-        .toggle-btn.active { background-color: #d69e2e; color: #1a202c; }
-        .sync-status { font-size: 12px; color: #a0aec0; text-align: center; margin-top: auto; }
         
         .float-text { position: absolute; pointer-events: none; font-weight: bold; font-size: 16px; z-index: 1000; animation: floatUp 1.2s ease-out forwards; text-shadow: 1px 1px 2px #000; }
         @keyframes floatUp { 0% { opacity: 1; transform: translateY(0px) scale(1); } 100% { opacity: 0; transform: translateY(-40px) scale(1.1); } }
@@ -66,81 +63,86 @@
 </head>
 <body>
 
-    <div id="login-overlay">
-        <div class="login-box">
+    <div id="login-overlay" class="overlay" style="display:flex; z-index: 9999;">
+        <div class="modal-box login-box">
             <h1>Sovereign Realms</h1>
             <input type="text" id="username-input" placeholder="Enter Commander Name" autocomplete="off">
-            <button onclick="loginUser()">Enter Realm</button>
+            <button class="modal-btn" onclick="loginUser()">Enter Realm</button>
         </div>
     </div>
 
-    <div id="quest-modal-overlay">
-        <div class="quest-modal-box">
-            <h2>New Royal Decree</h2>
-            <p class="narrative" id="qm-narrative"></p>
-            <p class="goal" id="qm-goal"></p>
-            <button onclick="document.getElementById('quest-modal-overlay').style.display='none'">Accept Decree</button>
+    <div id="info-modal" class="overlay" onclick="closeModal('info-modal')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h2 id="info-title">Breakdown</h2>
+            <pre id="info-content"></pre>
+            <button class="modal-btn close-btn" onclick="closeModal('info-modal')">Close</button>
+        </div>
+    </div>
+
+    <div id="quest-modal" class="overlay" onclick="closeModal('quest-modal')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h2>📖 Story Quests</h2>
+            <div id="quest-content">Loading...</div>
+            <button class="modal-btn close-btn" onclick="closeModal('quest-modal')" style="margin-top: 15px;">Close</button>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="overlay" onclick="closeModal('settings-modal')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h2>⚙️ System Menu</h2>
+            <p style="color: #a0aec0; font-size: 13px; margin-bottom: 15px;">Player: <span id="ui-username" style="color:#f1c40f;"></span></p>
+            <button class="modal-btn" onclick="centerViewport(); closeModal('settings-modal');">📍 Return to Capital</button>
+            <button class="modal-btn" id="btn-quickbuild" style="background-color: #4a5568;" onclick="toggleQuickBuild(this)">⚡ Toggle Quick Build</button>
+            <button class="modal-btn" onclick="fetchMapData(); closeModal('settings-modal');" style="background-color: #38a169;">🔄 Refresh Sync</button>
+            <button class="modal-btn" onclick="logoutUser()" style="background-color: #9b2c2c;">🚪 Change User</button>
+            <p id="sync-indicator" style="font-size: 11px; color: #718096; margin-top: 10px;">Awaiting Login...</p>
         </div>
     </div>
 
     <header>
-        <h2 style="font-size:18px;">Player: <span id="ui-username" style="color:#f1c40f;"></span></h2>
         <div class="resources">
-            <div class="res-item" id="tt-gold">
-                Gold: <span id="gold-val">0</span><span id="gold-cap" class="limit">/1000</span> <span id="gold-inc" class="income-text"></span>
-                <div class="timer-container">
-                    <svg viewBox="0 0 36 36">
-                        <path class="timer-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        <path id="tick-timer-path" class="timer-fill" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    </svg>
-                </div>
+            <div class="res-item" onclick="showInfoModal('🧈 Gold', breakdown.goldText)">
+                🧈 <span id="gold-val">0</span><span id="gold-cap" class="limit">/1000</span>
             </div>
-            <div class="res-item" id="tt-wood">Wood: <span id="wood-val">60</span><span id="wood-cap" class="limit">/200</span> <span id="wood-inc" class="income-text"></span></div>
-            <div class="res-item" id="tt-stone">Stone: <span id="stone-val">10</span><span id="stone-cap" class="limit">/200</span> <span id="stone-inc" class="income-text"></span></div>
-            
-            <div class="res-item" id="tt-food" style="border-color: #48bb78;">Food (Used/Max): <span id="food-val" style="color:#68d391;">0/0</span></div>
-            <div class="res-item" id="tt-wf" style="border-color: #4c51bf;">Workforce (Used/Max): <span id="workforce-val" style="color:#a3bffa;">0/10</span></div>
+            <div class="res-item" onclick="showInfoModal('🪵 Wood', breakdown.woodText)">
+                🪵 <span id="wood-val">60</span><span id="wood-cap" class="limit">/200</span>
+            </div>
+            <div class="res-item" onclick="showInfoModal('🪨 Stone', breakdown.stoneText)">
+                🪨 <span id="stone-val">10</span><span id="stone-cap" class="limit">/200</span>
+            </div>
+            <div class="res-item" style="border-color: #48bb78;" onclick="showInfoModal('🍖 Food', breakdown.foodText)">
+                🍖 <span id="food-val" style="color:#68d391;">0/0</span>
+            </div>
+            <div class="res-item" style="border-color: #4c51bf;" onclick="showInfoModal('⚒️ Workforce', breakdown.wfText)">
+                ⚒️ <span id="workforce-val" style="color:#a3bffa;">0/10</span>
+            </div>
         </div>
     </header>
 
     <div class="main-container">
+        <div class="fab-container">
+            <div class="fab" onclick="openModal('quest-modal'); updateQuestUI();">📖</div>
+            <div class="fab" onclick="openModal('settings-modal')">⚙️</div>
+        </div>
+
         <div class="map-wrapper" id="map-scroll-container">
             <canvas id="gameCanvas" width="4000" height="4000"></canvas>
         </div>
 
-        <div class="sidebar">
-            <div class="panel" id="quest-panel">
-                <h3>Story Quests</h3>
-                <div id="quest-content">
-                    <p style="color:#a0aec0; font-size:13px;">Loading quests...</p>
-                </div>
+        <div class="bottom-panel" id="bottom-panel">
+            <div class="bp-header">
+                <h3>Tile Inspector</h3>
+                <button class="close-bp" onclick="closeBottomPanel()">✖</button>
             </div>
-
-            <div class="panel">
-                <h3>Navigation & System</h3>
-                <button id="btn-recenter" class="nav-btn">📍 Return to Capital</button>
-                <button id="btn-quickbuild" class="nav-btn toggle-btn">⚡ Toggle Quick Build</button>
-                <button id="btn-refresh" class="nav-btn" style="background-color: #38a169;">🔄 Refresh Sync</button>
-                <button onclick="logoutUser()" class="nav-btn" style="background-color: #9b2c2c;">🚪 Change User</button>
+            <div class="tile-details">
+                <p>Position: <span id="ui-coord">None</span></p>
+                <p>Terrain: <span id="ui-terrain">-</span></p>
+                <p>Built: <span id="ui-built">-</span></p>
+                <p>Production: <span id="ui-income" class="income-highlight">-</span></p>
             </div>
-
-            <div class="panel">
-                <h3>Selected Coordinate</h3>
-                <div class="tile-details">
-                    <p>Position: <span id="ui-coord">None</span></p>
-                    <p>Terrain: <span id="ui-terrain">-</span></p>
-                    <p>Built: <span id="ui-built">-</span></p>
-                    <p>Production: <span id="ui-income" class="income-highlight">-</span></p>
-                </div>
+            <div class="actions-list" id="ui-actions">
+                <p style="color: #718096; font-size: 14px;">Select a map square to act.</p>
             </div>
-
-            <div class="panel">
-                <h3>Available Commands</h3>
-                <div class="actions-list" id="ui-actions">
-                    <p style="color: #718096; font-size: 14px;">Select a map square to act.</p>
-                </div>
-            </div>
-            <div class="sync-status" id="sync-indicator">Awaiting Login...</div>
         </div>
     </div>
 
@@ -156,28 +158,18 @@
         let selectedTile = null;
         let capitalPos = { row: 50, col: 50 }; 
         
-        let connectedTownsCount = 0;
-        let exploredCount = 0;
-        let discoveredTownsCount = 0;
-        let shipyardCount = 0;
-        let boatCount = 0;
-        
-        let farmCount = 0;
-        let lumberMillCount = 0;
-        let quarryCount = 0;
-        let questCapitalTaps = 0; 
+        let connectedTownsCount = 0, exploredCount = 0, discoveredTownsCount = 0;
+        let shipyardCount = 0, boatCount = 0;
+        let farmCount = 0, lumberMillCount = 0, quarryCount = 0, questCapitalTaps = 0; 
 
         let resources = { gold: 0, wood: 60, stone: 10 };
         let incomes = { gold: 0, wood: 0, stone: 0 };
         
         let workforce = { used: 0, max: 10 };
         let food = { used: 0, max: 0 };
-        let globalStorageCap = 200;
-        let globalGoldCap = 1000;
+        let globalStorageCap = 200, globalGoldCap = 1000;
         
-        let capitalTier = 1;
-        let questTier = 0;
-        let freeHouses = 0;
+        let capitalTier = 1, questTier = 0, freeHouses = 0;
         let breakdown = {};
         let harvestData = {}; 
         
@@ -186,11 +178,14 @@
 
         let updateQueue = [];
         let isUpdatingBackend = false;
-        let lastTickTime = Date.now();
+        
+        // Pinch-to-zoom variables
+        let currentZoom = 1.0;
+        let initialPinchDist = null;
 
         const COSTS = { 
             road: 15, lane: 20, house: 50, lumbermill: 40, 
-            quarry: 30, goldmine: 100, shipyard: 80, farm: 30, boat: 25,
+            quarry: 60, goldmine: 100, shipyard: 80, farm: 30, boat: 25,
             expand: {g: 100, w: 50, s: 50}, terraform: 50
         };
         const WORKFORCE_COSTS = { lumbermill: 2, quarry: 3, mine: 4, farm: 2, boat: 1, shipyard: 2, road: 0, lane: 0, house: 0 };
@@ -265,31 +260,70 @@
         };
 
         window.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('btn-recenter').addEventListener('click', centerViewport);
-            document.getElementById('btn-refresh').addEventListener('click', fetchMapData);
-            document.getElementById('btn-quickbuild').addEventListener('click', (e) => {
-                quickBuildActive = !quickBuildActive;
-                e.target.className = quickBuildActive ? "nav-btn toggle-btn active" : "nav-btn toggle-btn";
-                e.target.innerText = quickBuildActive ? "⚡ Quick Build: ON" : "⚡ Toggle Quick Build";
-                updateSidebar();
-            });
-            
             document.getElementById('username-input').addEventListener('keypress', function (e) {
                 if (e.key === 'Enter') loginUser();
             });
             
-            requestAnimationFrame(updateTimerVisual);
             setInterval(gameTick, 10000); 
-            setInterval(autoSaveResources, 30000); // Saves vault automatically every 30 seconds
+            setInterval(autoSaveResources, 30000); 
+            
+            // Touch handlers for pinch-to-zoom
+            scrollContainer.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    initialPinchDist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                }
+            });
+
+            scrollContainer.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2 && initialPinchDist) {
+                    e.preventDefault(); 
+                    let newDist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    let zoomChange = newDist / initialPinchDist;
+                    currentZoom = Math.min(Math.max(0.3, currentZoom * zoomChange), 2.0);
+                    canvas.style.transform = `scale(${currentZoom})`;
+                    initialPinchDist = newDist; 
+                }
+            });
+
+            scrollContainer.addEventListener('touchend', (e) => {
+                if (e.touches.length < 2) initialPinchDist = null;
+            });
         });
+
+        // UI Modals
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         
-        function updateTimerVisual() {
-            let now = Date.now();
-            let elapsed = now - lastTickTime;
-            let progress = Math.min(elapsed / 10000, 1);
-            let offset = 100 - (progress * 100);
-            document.getElementById('tick-timer-path').style.strokeDashoffset = offset;
-            requestAnimationFrame(updateTimerVisual);
+        function showInfoModal(title, content) {
+            document.getElementById('info-title').innerText = title;
+            document.getElementById('info-content').innerText = content || "No data available.";
+            openModal('info-modal');
+        }
+
+        function closeBottomPanel() {
+            document.getElementById('bottom-panel').classList.remove('active');
+            selectedTile = null;
+            renderMap();
+        }
+
+        function toggleQuickBuild(btnElement) {
+            quickBuildActive = !quickBuildActive;
+            if (quickBuildActive) {
+                btnElement.style.backgroundColor = '#d69e2e';
+                btnElement.style.color = '#1a202c';
+                btnElement.innerText = "⚡ Quick Build: ON";
+            } else {
+                btnElement.style.backgroundColor = '#4a5568';
+                btnElement.style.color = 'white';
+                btnElement.innerText = "⚡ Toggle Quick Build";
+            }
+            if(selectedTile) updateBottomPanel();
         }
 
         function loginUser() {
@@ -297,21 +331,22 @@
             if (input) {
                 currentUser = input;
                 document.getElementById('ui-username').innerText = currentUser;
-                document.getElementById('login-overlay').style.display = 'none';
+                closeModal('login-overlay');
                 
                 selectedTile = null; lastAnchorTile = null; harvestData = {};
-                questCapitalTaps = 0; 
+                questCapitalTaps = 0; currentZoom = 1.0; canvas.style.transform = `scale(1.0)`;
                 resources = { gold: 0, wood: 60, stone: 10 };
-                lastTickTime = Date.now(); 
                 
                 fetchMapData();
             }
         }
 
         function logoutUser() {
-            autoSaveResources(); // Save before exiting
+            autoSaveResources(); 
             currentUser = "";
-            document.getElementById('login-overlay').style.display = 'flex';
+            closeModal('settings-modal');
+            closeBottomPanel();
+            openModal('login-overlay');
             document.getElementById('username-input').value = "";
         }
 
@@ -322,17 +357,14 @@
             
             st = st.replace(/:BankG\d+W\d+S\d+/g, '');
             st += `:BankG${Math.floor(resources.gold)}W${Math.floor(resources.wood)}S${Math.floor(resources.stone)}`;
-            
             stateGrid[r-1][c-1] = st;
-            
-            // Push directly to queue without triggering side effects
             updateQueue.push({row: r, col: c, value: st});
             processUpdateQueue();
         }
 
         function centerViewport() {
-            scrollContainer.scrollLeft = ((capitalPos.col - 1) * TILE_SIZE) - (scrollContainer.clientWidth / 2) + (TILE_SIZE / 2);
-            scrollContainer.scrollTop = ((capitalPos.row - 1) * TILE_SIZE) - (scrollContainer.clientHeight / 2) + (TILE_SIZE / 2);
+            scrollContainer.scrollLeft = ((capitalPos.col - 1) * TILE_SIZE * currentZoom) - (scrollContainer.clientWidth / 2) + ((TILE_SIZE * currentZoom) / 2);
+            scrollContainer.scrollTop = ((capitalPos.row - 1) * TILE_SIZE * currentZoom) - (scrollContainer.clientHeight / 2) + ((TILE_SIZE * currentZoom) / 2);
         }
         
         function spawnFloatingText(text, x, y, color = '#f6e05e') {
@@ -346,15 +378,6 @@
             setTimeout(() => el.remove(), 1200);
         }
 
-        function showQuestModal() {
-            if (questTier < QUESTS.length) {
-                let q = QUESTS[questTier];
-                document.getElementById('qm-narrative').innerText = `"${q.narrative}"`;
-                document.getElementById('qm-goal').innerText = `Quest: ${q.goal}`;
-                document.getElementById('quest-modal-overlay').style.display = 'flex';
-            }
-        }
-
         function updateResourceUI() {
             document.getElementById('gold-val').innerText = Math.floor(resources.gold);
             document.getElementById('wood-val').innerText = Math.floor(resources.wood);
@@ -366,17 +389,20 @@
             
             document.getElementById('food-val').innerText = `${food.used}/${food.max}`;
             document.getElementById('workforce-val').innerText = `${workforce.used}/${workforce.max}`;
-
-            document.getElementById('gold-inc').innerText = `(+${incomes.gold}/10s)`;
-            document.getElementById('wood-inc').innerText = `(+${incomes.wood}/10s)`;
-            document.getElementById('stone-inc').innerText = `(+${incomes.stone}/10s)`;
             
-            updateQuestUI();
+            // Build the modal texts directly into the breakdown object
+            breakdown.goldText = `INCOME (+${incomes.gold}/10s):\nExploration Base: +${breakdown.goldBase}\nConnected Towns: +${breakdown.goldTowns}\nActive Mines: +${breakdown.goldMines}`;
+            breakdown.woodText = `INCOME (+${incomes.wood}/10s):\nBase Income: +${breakdown.woodBase}\nLumber Mills: +${breakdown.woodMills}`;
+            breakdown.stoneText = `INCOME (+${incomes.stone}/10s):\nQuarries: +${breakdown.stoneQuarries}`;
+            breakdown.foodText = `PRODUCED (${food.max}):\nFarms: +${breakdown.foodFarms}\nFishing Boats: +${breakdown.foodBoats}\n\nCONSUMED (${food.used}):\nTowns/Capital: -${breakdown.foodTowns}\nHouses: -${breakdown.foodHouses}`;
+            breakdown.wfText = `MAX WORKFORCE (${workforce.max}):\nBase Pool: +${breakdown.wfBase}\nHouses: +${breakdown.wfHouses}\n\nUSED WORKFORCE (${workforce.used}):\nMills: -${breakdown.wfMills}\nQuarries: -${breakdown.wfQuarries}\nMines: -${breakdown.wfMines}\nFarms: -${breakdown.wfFarms}\nBoats: -${breakdown.wfBoats}\nShipyards: -${breakdown.wfShipyards}`;
+            
+            if(document.getElementById('quest-modal').style.display === 'flex') updateQuestUI();
         }
 
         async function fetchMapData() {
             if (!currentUser) return;
-            document.getElementById('sync-indicator').innerText = "Syncing with Google Sheets...";
+            document.getElementById('sync-indicator').innerText = "Syncing...";
             try {
                 let res = await fetch(`${API_URL}?action=getMap&user=${encodeURIComponent(currentUser)}&t=${new Date().getTime()}`);
                 let data = await res.json();
@@ -397,7 +423,6 @@
                 document.getElementById('sync-indicator').innerText = "Live Synced.";
                 calculateNetworks();
                 
-                // Extract vault state if it exists
                 let capState = stateGrid[capitalPos.row - 1][capitalPos.col - 1] || "";
                 let bankMatch = capState.match(/:BankG(\d+)W(\d+)S(\d+)/);
                 if (bankMatch) {
@@ -408,10 +433,15 @@
                 
                 centerViewport();
                 renderMap();
-                updateSidebar();
                 updateResourceUI();
                 
-                showQuestModal();
+                // Show modal if they haven't finished all quests
+                if(questTier < QUESTS.length) {
+                    let q = QUESTS[questTier];
+                    document.getElementById('qm-narrative').innerText = `"${q.narrative}"`;
+                    document.getElementById('qm-goal').innerText = `Quest: ${q.goal}`;
+                    openModal('quest-modal');
+                }
             } catch(e) {
                 document.getElementById('sync-indicator').innerText = "Sync Failed.";
             }
@@ -420,7 +450,7 @@
         async function processUpdateQueue() {
             if (isUpdatingBackend || updateQueue.length === 0) return;
             isUpdatingBackend = true;
-            document.getElementById('sync-indicator').innerText = `Saving... (${updateQueue.length} pending)`;
+            document.getElementById('sync-indicator').innerText = `Saving...`;
             
             let update = updateQueue.shift();
             try {
@@ -430,11 +460,8 @@
             
             isUpdatingBackend = false;
             
-            if (updateQueue.length > 0) {
-                processUpdateQueue();
-            } else {
-                document.getElementById('sync-indicator').innerText = "Live Synced.";
-            }
+            if (updateQueue.length > 0) processUpdateQueue();
+            else document.getElementById('sync-indicator').innerText = "Live Synced.";
         }
 
         function pushTileUpdate(row, col, value, actionTypeStr = null) {
@@ -444,7 +471,7 @@
             calculateNetworks(); 
             updateResourceUI();
             renderMap();
-            updateSidebar();
+            updateBottomPanel();
             
             updateQueue.push({row, col, value});
             processUpdateQueue();
@@ -473,16 +500,16 @@
             let completed = q.isComplete();
             
             let html = `
-                <p style="font-style:italic; margin-bottom: 8px; color: #e2e8f0; font-size: 14px;">"${q.narrative}"</p>
-                <p style="font-size:14px; margin-bottom: 4px;"><b>Quest:</b> ${q.goal}</p>
-                <p style="font-size:14px; margin-bottom: 10px; color: #f6e05e;"><b>Reward:</b> ${q.reward}</p>
+                <p class="narrative">"${q.narrative}"</p>
+                <p style="font-size:15px; margin-bottom: 4px; color:white;"><b>Quest:</b> ${q.goal}</p>
+                <p style="font-size:15px; margin-bottom: 15px; color: #f6e05e;"><b>Reward:</b> ${q.reward}</p>
             `;
             
             if (completed) {
-                html += `<button style="background-color:#38a169; width:100%;" onclick="claimQuest()">Claim Reward</button>`;
+                html += `<button class="modal-btn" style="background-color:#38a169;" onclick="claimQuest()">Claim Reward</button>`;
             } else {
                 let progressText = q.progress ? q.progress() : "Tracking...";
-                html += `<button disabled style="width:100%; text-align:center;">In Progress... (${progressText})</button>`;
+                html += `<button class="modal-btn" disabled>In Progress... (${progressText})</button>`;
             }
             container.innerHTML = html;
         }
@@ -490,8 +517,13 @@
         window.claimQuest = function() {
             QUESTS[questTier].claim();
             updateResourceUI();
-            updateSidebar();
-            showQuestModal();
+            
+            if (questTier < QUESTS.length) {
+                let q = QUESTS[questTier];
+                document.getElementById('qm-narrative').innerText = `"${q.narrative}"`;
+                document.getElementById('qm-goal').innerText = `Quest: ${q.goal}`;
+            }
+            updateQuestUI();
         }
 
         // --- Core Math Helpers ---
@@ -510,13 +542,10 @@
             if (st.includes(':Planted')) base += ':Planted';
             let capMatch = st.match(/:Cap\d+/);
             if(capMatch) base += capMatch[0];
-            
             let qMatch = st.match(/:Q\d+/);
             if(qMatch) base += qMatch[0];
-            
             let fhMatch = st.match(/:FH\d+/);
             if(fhMatch) base += fhMatch[0];
-            
             let bankMatch = st.match(/:BankG\d+W\d+S\d+/);
             if(bankMatch) base += bankMatch[0];
             
@@ -845,8 +874,9 @@
         canvas.addEventListener('click', (e) => {
             if (!currentUser) return;
             const rect = canvas.getBoundingClientRect();
-            const col = Math.floor((e.clientX - rect.left) / TILE_SIZE) + 1;
-            const row = Math.floor((e.clientY - rect.top) / TILE_SIZE) + 1;
+            // Account for custom zoom level when determining clicked coordinates
+            const col = Math.floor((e.clientX - rect.left) / (TILE_SIZE * currentZoom)) + 1;
+            const row = Math.floor((e.clientY - rect.top) / (TILE_SIZE * currentZoom)) + 1;
 
             if(row > 0 && row <= 100 && col > 0 && col <= 100) {
                 let state = stateGrid[row - 1][col - 1];
@@ -879,9 +909,7 @@
                             let taxAmt = 10 * capitalTier;
                             resources.gold = Math.min(globalGoldCap, resources.gold + taxAmt);
                             spawnFloatingText(`+${taxAmt} Gold`, e.clientX, e.clientY, '#f1c40f');
-                            if (questTier === 0) {
-                                questCapitalTaps++;
-                            }
+                            if (questTier === 0) questCapitalTaps++;
                         }
                         updateResourceUI();
                     } else {
@@ -901,9 +929,11 @@
                         spawnFloatingText(`-${cost} Gold`, e.clientX, e.clientY, '#f6e05e');
                         pushTileUpdate(row, col, 'U');
                         selectedTile = { row, col };
+                        document.getElementById('bottom-panel').classList.add('active');
                     }
                 } else {
                     selectedTile = { row, col };
+                    document.getElementById('bottom-panel').classList.add('active');
                     
                     if (state.includes(':Road')) lastAnchorTile = { r: row-1, c: col-1, type: 'Road' };
                     else if (state.includes(':Lane')) lastAnchorTile = { r: row-1, c: col-1, type: 'Lane' };
@@ -911,12 +941,12 @@
                     else if (state.includes(':Planted')) lastAnchorTile = { r: row-1, c: col-1, type: 'Planted' };
                     
                     renderMap();
-                    updateSidebar();
+                    updateBottomPanel();
                 }
             }
         });
 
-        function updateSidebar() {
+        function updateBottomPanel() {
             if (!selectedTile) return;
             const rIdx = selectedTile.row - 1; const cIdx = selectedTile.col - 1;
             const state = stateGrid[rIdx][cIdx];
@@ -929,7 +959,7 @@
             document.getElementById('ui-terrain').innerText = isUncovered ? styleObj.label : "Obscured Haze";
             
             let parts = state.split(':');
-            let builtString = parts.find(p => p !== 'U' && p !== 'ExpandedBA' && p !== 'Cleared' && p !== 'Planted' && !p.startsWith('Cap') && !p.startsWith('Q') && !p.startsWith('FH'));
+            let builtString = parts.find(p => p !== 'U' && p !== 'ExpandedBA' && p !== 'Cleared' && p !== 'Planted' && !p.startsWith('Cap') && !p.startsWith('Q') && !p.startsWith('FH') && !p.startsWith('Bank'));
             document.getElementById('ui-built').innerText = builtString ? builtString : "Open Land";
 
             let infoText = "-";
@@ -970,10 +1000,8 @@
                     let currentTier = capMatch ? parseInt(capMatch[1]) : 1;
                     let nextTier = currentTier + 1;
                     
-                    // --- ADJUST YOUR COSTS HERE ---
                     let woodCost = 200 + ((currentTier - 1) * 100);
-                    let stoneCost = 100 + ((currentTier - 1) * 50); // Set your custom stone math here!
-                    // ------------------------------
+                    let stoneCost = 150 + ((currentTier - 1) * 50); 
     
                     let btn = document.createElement('button');
                     let wCls = resources.wood < woodCost ? 'req-missing' : '';
@@ -983,12 +1011,11 @@
                     btn.disabled = resources.wood < woodCost || resources.stone < stoneCost;
     
                     btn.onclick = () => { 
-                        resources.wood -= woodCost; 
-                        resources.stone -= stoneCost; 
-                    pushTileUpdate(selectedTile.row, selectedTile.col, `${state.replace(/:Cap\d+/, '')}:Cap${nextTier}`); 
-                };
-                actionsContainer.appendChild(btn);
-            }
+                        resources.wood -= woodCost; resources.stone -= stoneCost; 
+                        pushTileUpdate(selectedTile.row, selectedTile.col, `${state.replace(/:Cap\d+/, '')}:Cap${nextTier}`); 
+                    };
+                    actionsContainer.appendChild(btn);
+                }
 
                 if (!builtString && terr !== 'C') {
                     let canAttach = hasBuildingAdjacency(selectedTile.row, selectedTile.col);
@@ -999,7 +1026,7 @@
                         let tierTxt = capitalTier < 3 ? ` <span style="color:#fc8181">(Lvl 3 Cap Req)</span>` : '';
                         btn.innerHTML = `Clear Forest (<span class="${resources.gold < cost ? 'req-missing' : ''}">${cost} Gold</span>)${tierTxt}`;
                         if (capitalTier < 3) {
-                            btn.disabled = true; btn.style.opacity = '0.3'; btn.title = "Requires Capital Level 3.";
+                            btn.disabled = true; btn.title = "Requires Capital Level 3.";
                         } else {
                             btn.disabled = resources.gold < cost; 
                             btn.onclick = () => { resources.gold -= cost; pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Cleared', 'Cleared'); };
@@ -1012,7 +1039,7 @@
                         let tierTxt = capitalTier < 3 ? ` <span style="color:#fc8181">(Lvl 3 Cap Req)</span>` : '';
                         btn.innerHTML = `Plant Forest (<span class="${resources.gold < cost ? 'req-missing' : ''}">${cost} Gold</span>)${tierTxt}`;
                         if (capitalTier < 3) {
-                            btn.disabled = true; btn.style.opacity = '0.3'; btn.title = "Requires Capital Level 3.";
+                            btn.disabled = true; btn.title = "Requires Capital Level 3.";
                         } else {
                             btn.disabled = resources.gold < cost; 
                             btn.onclick = () => { resources.gold -= cost; pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Planted', 'Planted'); };
@@ -1036,7 +1063,6 @@
                             let ptTerr = getEffectiveTerrain(mapGrid[pt.r][pt.c], ptSt);
                             
                             if (ptSt.includes(`:${actionKey}`)) continue; 
-                            
                             if (!ptSt.startsWith('U')) { valid = false; break; }
                             
                             if (actionKey === 'Road') {
@@ -1080,7 +1106,7 @@
                     if (terr === 'R' && !isWheatField(rIdx, cIdx)) {
                         let canFord = canBuildFord(rIdx, cIdx);
                         createBuildBtn(actionsContainer, 'Build River Ford', 'gold', COSTS.road, 'Road', canFord, baseStateStr, 0, 0, 'Road', null, 1);
-                        if (!canFord) { let p = document.createElement('p'); p.style.color = '#fc8181'; p.style.fontSize = '12px'; p.innerText = "Fords require a road/town connection on the perpendicular bank."; actionsContainer.appendChild(p); }
+                        if (!canFord) { let p = document.createElement('p'); p.style.color = '#fc8181'; p.style.fontSize = '12px'; p.innerText = "Fords require perpendicular road connection."; actionsContainer.appendChild(p); }
                     }
 
                     if (terr === 'W' || terr === 'WF') {
@@ -1128,15 +1154,15 @@
             btn.innerHTML = `${label} (<span class="${costCls}">${isFreeHouse ? 'FREE' : actualCost + ' ' + resType}</span>${reqLabel})${tierTxt}`;
             
             if (capitalTier < reqTier) {
-                btn.disabled = true; btn.style.opacity = '0.3'; btn.title = `Requires Capital Level ${reqTier}`;
+                btn.disabled = true; btn.title = `Requires Capital Level ${reqTier}`;
             } else if (customBlockMsg) {
-                btn.disabled = true; btn.style.opacity = '0.3'; btn.title = customBlockMsg;
+                btn.disabled = true; btn.title = customBlockMsg;
             } else if (!reqMet) {
-                btn.disabled = true; btn.style.opacity = '0.3'; btn.title = "Requires network adjacency.";
+                btn.disabled = true; btn.title = "Requires network adjacency.";
             } else if (workforce.used + wfCost > workforce.max) {
-                btn.disabled = true; btn.style.opacity = '0.3'; btn.title = "Insufficient Workforce capacity.";
+                btn.disabled = true; btn.title = "Insufficient Workforce capacity.";
             } else if (foodCost > 0 && food.max - food.used < foodCost) {
-                btn.disabled = true; btn.style.opacity = '0.3'; btn.title = "Insufficient Food capacity.";
+                btn.disabled = true; btn.title = "Insufficient Food capacity.";
             } else {
                 btn.disabled = resources[resType] < actualCost;
             }
