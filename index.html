@@ -21,28 +21,34 @@
 
         .login-box input { width: 100%; padding: 10px; margin-bottom: 20px; border-radius: 5px; border: 1px solid #4a5568; background: #14141c; color: white; outline: none; font-size: 16px; text-align: center; }
 
-        header { background-color: #111116; padding: 8px 10px; display: flex; justify-content: center; border-bottom: 2px solid #2d2d3d; z-index: 100; }
+        header { background-color: #111116; padding: 10px 40px 10px 10px; display: flex; justify-content: center; border-bottom: 2px solid #2d2d3d; z-index: 100; position: relative; }
         .resources { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
         .res-item { background: #22222f; padding: 6px 8px; border-radius: 6px; border: 1px solid #3b3b4f; font-weight: bold; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
         .res-item:active { background: #2d2d3d; }
         .res-item span { color: #f1c40f; }
         .res-item .limit { color: #a0aec0; font-size: 11px; font-weight: normal; }
 
+        .timer-container { position: absolute; right: 12px; top: 12px; width: 18px; height: 18px; transform: rotate(-90deg); }
+        .timer-bg { fill: none; stroke: #2d2d3d; stroke-width: 4; }
+        .timer-fill { fill: none; stroke: #f1c40f; stroke-width: 4; stroke-dasharray: 100 100; stroke-dashoffset: 100; transition: stroke-dashoffset 0.1s linear; }
+
         .main-container { display: flex; flex: 1; overflow: hidden; position: relative; }
-        .map-wrapper { flex: 1; overflow: auto; background: #0f0f14; position: relative; cursor: grab; touch-action: auto; scroll-behavior: smooth; }
+        .map-wrapper { flex: 1; overflow: auto; background: #0f0f14; position: relative; cursor: grab; touch-action: auto; scroll-behavior: auto; } 
         .map-wrapper:active { cursor: grabbing; }
-        canvas { display: block; transform-origin: top left; } 
         
-        .fab-container { position: absolute; top: 15px; right: 15px; display: flex; flex-direction: column; gap: 12px; z-index: 50; }
-        .fab { width: 45px; height: 45px; border-radius: 50%; background: #2d2d3d; border: 2px solid #4a5568; color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.5); cursor: pointer; }
+        canvas { display: block; width: 4000px; height: 4000px; } 
+        
+        .fab-container { position: absolute; top: 15px; right: 15px; display: flex; flex-direction: column; gap: 12px; z-index: 50; align-items: center; }
+        .fab { width: 45px; height: 45px; border-radius: 50%; background: #2d2d3d; border: 2px solid #4a5568; color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.5); pointer-events: auto; cursor: pointer; transition: background-color 0.3s; }
         .fab:active { transform: scale(0.9); }
+        .mini-counter { font-size: 11px; font-weight: bold; margin-top: -6px; color: #fff; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; }
 
-        #dynamic-qb-btn { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(20px); background: #4a5568; border: 2px solid #2d3748; color: white; padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 13px; cursor: pointer; z-index: 90; opacity: 0; pointer-events: none; transition: all 0.3s ease; box-shadow: 0 -2px 10px rgba(0,0,0,0.5); white-space: nowrap; }
-        #dynamic-qb-btn.visible { transform: translateX(-50%) translateY(-10px); opacity: 1; pointer-events: auto; }
-        #dynamic-qb-btn.active { background: #d69e2e; color: #1a202c; border-color: #b7791f; }
-
-        .bottom-panel { position: absolute; bottom: 0; left: 0; width: 100%; background: #14141c; border-top: 2px solid #2d2d3d; padding: 15px; border-radius: 15px 15px 0 0; transform: translateY(110%); transition: transform 0.3s ease-out; max-height: 60vh; overflow-y: auto; z-index: 100; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.5); }
+        .bottom-panel { position: absolute; bottom: 0; left: 0; width: 100%; background: #14141c; border-top: 2px solid #2d2d3d; padding: 15px; border-radius: 15px 15px 0 0; transform: translateY(110%); transition: transform 0.3s ease-out; z-index: 100; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 -5px 15px rgba(0,0,0,0.5); }
         .bottom-panel.active { transform: translateY(0); }
+        
+        #quick-build-offer { position: absolute; bottom: calc(100% + 15px); left: 50%; transform: translateX(-50%); background: #2d3748; color: white; padding: 12px 24px; border-radius: 30px; font-weight: bold; font-size: 14px; border: 2px solid #4a5568; z-index: 150; display: none; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: all 0.2s; white-space: nowrap; }
+        #quick-build-offer.active { background: #d69e2e; color: #1a202c; border-color: #b7791f; }
+
         .bp-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #2d2d3d; padding-bottom: 8px; margin-bottom: 5px; }
         .bp-header h3 { color: #a0aec0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin: 0;}
         .close-bp { background: transparent; border: none; color: #a0aec0; font-size: 18px; cursor: pointer; padding: 5px; }
@@ -51,8 +57,10 @@
         .tile-details span { font-weight: bold; color: #fff; }
         .income-highlight { color: #48bb78 !important; font-weight: bold; }
         
-        .actions-list { display: flex; flex-direction: column; gap: 8px; }
-        .actions-list button { background-color: #3182ce; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .actions-list { display: flex; flex-direction: column; gap: 8px; max-height: 110px; overflow-y: auto; padding-right: 5px; }
+        .actions-list::-webkit-scrollbar { width: 6px; }
+        .actions-list::-webkit-scrollbar-thumb { background-color: #4a5568; border-radius: 3px; }
+        .actions-list button { background-color: #3182ce; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; flex-shrink: 0; }
         .actions-list button:disabled { background-color: #2d3748; cursor: not-allowed; opacity: 0.7; }
         .req-missing { color: #fc8181 !important; }
         
@@ -70,6 +78,7 @@
         </div>
     </div>
 
+    <!-- Alert Modals -->
     <div id="quest-alert-modal" class="overlay" style="z-index: 9005;">
         <div class="modal-box">
             <h2>📜 New Royal Decree</h2>
@@ -119,12 +128,6 @@
         <div class="resources">
             <div class="res-item" onclick="showInfoModal('🧈 Gold', breakdown.goldText)">
                 🧈 <span id="gold-val">0</span><span id="gold-cap" class="limit">/1000</span>
-                <div class="timer-container">
-                    <svg viewBox="0 0 36 36">
-                        <path class="timer-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        <path id="tick-timer-path" class="timer-fill" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                    </svg>
-                </div>
             </div>
             <div class="res-item" onclick="showInfoModal('🪵 Wood', breakdown.woodText)">
                 🪵 <span id="wood-val">60</span><span id="wood-cap" class="limit">/200</span>
@@ -139,11 +142,19 @@
                 ⚒️ <span id="workforce-val" style="color:#a3bffa;">0/10</span>
             </div>
         </div>
+        
+        <div class="timer-container">
+            <svg viewBox="0 0 36 36">
+                <path class="timer-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                <path id="tick-timer-path" class="timer-fill" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+        </div>
     </header>
 
     <div class="main-container">
         <div class="fab-container">
-            <div class="fab" onclick="openModal('quest-modal'); updateQuestUI();">📖</div>
+            <div class="fab" id="fab-quest" onclick="openModal('quest-modal'); updateQuestUI();">📖</div>
+            <div class="mini-counter" id="quest-mini-counter">0/0</div>
             <div class="fab" onclick="openModal('settings-modal')">⚙️</div>
         </div>
 
@@ -152,7 +163,7 @@
         </div>
 
         <div class="bottom-panel" id="bottom-panel">
-            <button id="dynamic-qb-btn" onclick="toggleDynamicQuickBuild()">⚡ Enable Quick Build</button>
+            <button id="quick-build-offer" onclick="toggleQuickBuildState()">⚡ Enable Quick Build</button>
             
             <div class="bp-header">
                 <h3>Tile Inspector</h3>
@@ -160,8 +171,6 @@
             </div>
             <div class="tile-details">
                 <p>Position: <span id="ui-coord">None</span></p>
-                <p>Terrain: <span id="ui-terrain">-</span></p>
-                <p>Built: <span id="ui-built">-</span></p>
                 <p>Production: <span id="ui-income" class="income-highlight">-</span></p>
             </div>
             <div class="actions-list" id="ui-actions">
@@ -179,6 +188,17 @@
         let currentUser = "";
         let mapGrid = [];
         let stateGrid = [];
+        let networkGrid = []; 
+        
+        for (let r = 0; r < GRID_UNITS; r++) {
+            mapGrid[r] = []; stateGrid[r] = []; networkGrid[r] = [];
+            for (let c = 0; c < GRID_UNITS; c++) {
+                mapGrid[r][c] = 'P';
+                stateGrid[r][c] = 'H';
+                networkGrid[r][c] = false;
+            }
+        }
+        
         let selectedTile = null;
         let capitalPos = { row: 50, col: 50 }; 
         
@@ -200,16 +220,19 @@
         let quickBuildActive = false;
         let lastAnchorTile = null; 
         let activeQbType = null;
+        let justBuilt = false;
 
         let updateQueue = [];
         let isUpdatingBackend = false;
         
         let currentZoom = 1.0;
         let initialPinchDist = null;
+        let lastTickTime = Date.now();
+        let isDraggingMap = false; 
 
         const COSTS = { 
             road: 15, lane: 20, house: 50, lumbermill: 40, 
-            quarry: 60, goldmine: 100, shipyard: 80, farm: 30, boat: 25,
+            quarry: 30, goldmine: 100, shipyard: 80, farm: 30, boat: 25,
             expand: {g: 100, w: 50, s: 50}, terraform: 50
         };
         const WORKFORCE_COSTS = { lumbermill: 2, quarry: 3, mine: 4, farm: 2, boat: 1, shipyard: 2, road: 0, lane: 0, house: 0 };
@@ -221,7 +244,8 @@
                 reward: "100 Gold",
                 isComplete: () => questCapitalTaps >= 10,
                 progress: () => `${Math.min(questCapitalTaps, 10)}/10 Taxes Collected`,
-                claim: () => { resources.gold = Math.min(globalGoldCap, resources.gold + 100); updateCapitalData(1, 0); }
+                shortProgress: () => `${Math.min(questCapitalTaps, 10)}/10`,
+                claim: () => { resources.gold += 100; updateCapitalData(1, 0); } 
             },
             {
                 narrative: "Excellent. Now, put that coin to good use. Your people are hungry!",
@@ -229,6 +253,7 @@
                 reward: "Next house bought is free",
                 isComplete: () => farmCount >= 2,
                 progress: () => `${Math.min(farmCount, 2)}/2 Farms`, 
+                shortProgress: () => `${Math.min(farmCount, 2)}/2`,
                 claim: () => updateCapitalData(2, 1) 
             },
             {
@@ -237,7 +262,8 @@
                 reward: "50 Wood",
                 isComplete: () => exploredCount >= 75, 
                 progress: () => `${Math.min(Math.max(0, exploredCount - 25), 50)}/50 New Tiles`, 
-                claim: () => { resources.wood = Math.min(globalStorageCap, resources.wood + 50); updateCapitalData(3, 0); }
+                shortProgress: () => `${Math.min(Math.max(0, exploredCount - 25), 50)}/50`,
+                claim: () => { resources.wood += 50; updateCapitalData(3, 0); }
             },
             {
                 narrative: "Your kingdom is growing, we will need resources to keep expanding.",
@@ -245,7 +271,8 @@
                 reward: "60 Stone",
                 isComplete: () => lumberMillCount >= 1,
                 progress: () => `${Math.min(lumberMillCount, 1)}/1 Lumber Mill`, 
-                claim: () => { resources.stone = Math.min(globalStorageCap, resources.stone + 60); updateCapitalData(4, 0); }
+                shortProgress: () => `${Math.min(lumberMillCount, 1)}/1`,
+                claim: () => { resources.stone += 60; updateCapitalData(4, 0); }
             },
             {
                 narrative: "Head to the mountains, there are resources to plunder there too.",
@@ -253,9 +280,9 @@
                 reward: "100 Wood + 100 Stone",
                 isComplete: () => quarryCount >= 1,
                 progress: () => `${Math.min(quarryCount, 1)}/1 Stone Quarry`, 
+                shortProgress: () => `${Math.min(quarryCount, 1)}/1`,
                 claim: () => { 
-                    resources.wood = Math.min(globalStorageCap, resources.wood + 100); 
-                    resources.stone = Math.min(globalStorageCap, resources.stone + 100); 
+                    resources.wood += 100; resources.stone += 100; 
                     updateCapitalData(5, 0); 
                 }
             }
@@ -296,14 +323,65 @@
                 if (e.key === 'Enter') loginUser();
             });
             
-            // Warn before leaving if data is syncing
             window.addEventListener('beforeunload', (e) => {
                 if (updateQueue.length > 0) { e.returnValue = "Still saving to cloud, please wait!"; }
             });
             
+            requestAnimationFrame(updateTimerVisual);
+            
+            setInterval(() => {
+                let needsUpdate = false;
+                let now = Date.now();
+                for (let key in harvestData) {
+                    if (harvestData[key].clicks >= 10 && now - harvestData[key].lastClick < 20000) needsUpdate = true;
+                }
+                if (needsUpdate) renderMap();
+            }, 1000);
+            
             setInterval(gameTick, 10000); 
             setInterval(autoSaveResources, 30000); 
             
+            // --- Custom Desktop Drag-to-Pan Logic ---
+            let isDown = false;
+            let startX, startY, scrollLeft, scrollTop;
+
+            scrollContainer.addEventListener('mousedown', (e) => {
+                isDown = true;
+                isDraggingMap = false; 
+                scrollContainer.style.cursor = 'grabbing';
+                startX = e.pageX - scrollContainer.offsetLeft;
+                startY = e.pageY - scrollContainer.offsetTop;
+                scrollLeft = scrollContainer.scrollLeft;
+                scrollTop = scrollContainer.scrollTop;
+            });
+            scrollContainer.addEventListener('mouseleave', () => { 
+                isDown = false; 
+                scrollContainer.style.cursor = 'grab'; 
+            });
+            scrollContainer.addEventListener('mouseup', () => { 
+                isDown = false; 
+                scrollContainer.style.cursor = 'grab'; 
+                setTimeout(() => { isDraggingMap = false; }, 50); 
+            });
+            scrollContainer.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                const x = e.pageX - scrollContainer.offsetLeft;
+                const y = e.pageY - scrollContainer.offsetTop;
+                
+                // Only trigger drag block if moved more than 8 pixels
+                if (Math.abs(x - startX) > 8 || Math.abs(y - startY) > 8) {
+                    isDraggingMap = true;
+                }
+                
+                if (isDraggingMap) {
+                    const walkX = (x - startX) * 1.5; 
+                    const walkY = (y - startY) * 1.5;
+                    scrollContainer.scrollLeft = scrollLeft - walkX;
+                    scrollContainer.scrollTop = scrollTop - walkY;
+                }
+            });
+
+            // Touch mapping
             scrollContainer.addEventListener('touchstart', (e) => {
                 if (e.touches.length === 2) {
                     initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
@@ -316,7 +394,8 @@
                     let newDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                     let zoomChange = newDist / initialPinchDist;
                     currentZoom = Math.min(Math.max(0.3, currentZoom * zoomChange), 2.0);
-                    canvas.style.transform = `scale(${currentZoom})`;
+                    canvas.style.width = `${4000 * currentZoom}px`;
+                    canvas.style.height = `${4000 * currentZoom}px`;
                     initialPinchDist = newDist; 
                 }
             });
@@ -326,7 +405,16 @@
             });
         });
 
-        // UI Base Functions
+        function updateTimerVisual() {
+            let now = Date.now();
+            let elapsed = now - lastTickTime;
+            let progress = Math.min(elapsed / 10000, 1);
+            let offset = 100 - (progress * 100);
+            document.getElementById('tick-timer-path').style.strokeDashoffset = offset;
+            requestAnimationFrame(updateTimerVisual);
+        }
+
+        // UI Logic
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         
@@ -348,18 +436,28 @@
             openModal('dialogue-modal');
         }
 
-        function showQuickBuildFab(actionType) {
-            activeQbType = actionType;
-            let btn = document.getElementById('dynamic-qb-btn');
-            btn.innerText = `⚡ Enable Quick ${actionType}`;
-            btn.className = 'visible';
-            quickBuildActive = false;
+        // --- Context Quick Build System ---
+        function showQuickBuildOffer(type) {
+            if (activeQbType !== type) { quickBuildActive = false; }
+            activeQbType = type;
+            justBuilt = true; 
+            
+            let btn = document.getElementById('quick-build-offer');
+            btn.style.display = 'block';
+            
+            if (quickBuildActive) {
+                btn.classList.add('active');
+                btn.innerText = `⚡ Quick ${type}: ON`;
+            } else {
+                btn.classList.remove('active');
+                btn.innerText = `⚡ Enable Quick ${type}`;
+            }
         }
 
-        function toggleDynamicQuickBuild() {
+        function toggleQuickBuildState() {
             quickBuildActive = !quickBuildActive;
-            let btn = document.getElementById('dynamic-qb-btn');
-            if (quickBuildActive) {
+            let btn = document.getElementById('quick-build-offer');
+            if(quickBuildActive) {
                 btn.classList.add('active');
                 btn.innerText = `⚡ Quick ${activeQbType}: ON`;
             } else {
@@ -371,8 +469,9 @@
 
         function closeBottomPanel() {
             document.getElementById('bottom-panel').classList.remove('active');
-            document.getElementById('dynamic-qb-btn').className = ''; 
+            document.getElementById('quick-build-offer').style.display = 'none'; 
             quickBuildActive = false;
+            activeQbType = null;
             selectedTile = null;
             renderMap();
         }
@@ -385,8 +484,10 @@
                 closeModal('login-overlay');
                 
                 selectedTile = null; lastAnchorTile = null; activeQbType = null; harvestData = {};
-                questCapitalTaps = 0; currentZoom = 1.0; canvas.style.transform = `scale(1.0)`;
+                questCapitalTaps = 0; currentZoom = 1.0; 
+                canvas.style.width = '4000px'; canvas.style.height = '4000px';
                 resources = { gold: 0, wood: 60, stone: 10 };
+                lastTickTime = Date.now();
                 
                 fetchMapData();
             }
@@ -394,7 +495,7 @@
 
         function logoutUser() {
             autoSaveResources(); 
-            currentUser = ""; // Must clear after save pushed
+            currentUser = ""; 
             closeModal('settings-modal');
             closeBottomPanel();
             openModal('login-overlay');
@@ -404,21 +505,22 @@
         function autoSaveResources() {
             if (!currentUser) return;
             let r = capitalPos.row; let c = capitalPos.col;
-            if(!stateGrid[r-1]) return; // Failsafe
+            if(!stateGrid[r-1]) return; 
             let st = stateGrid[r-1][c-1] || "";
             
             st = st.replace(/:BankG\d+W\d+S\d+/g, '');
             st += `:BankG${Math.floor(resources.gold)}W${Math.floor(resources.wood)}S${Math.floor(resources.stone)}`;
             stateGrid[r-1][c-1] = st;
             
-            // Explicitly pass current user string to queue so logout doesn't break it
             updateQueue.push({row: r, col: c, value: st, user: currentUser});
             processUpdateQueue();
         }
 
         function snapTo(row, col) {
-            scrollContainer.scrollLeft = ((col - 1) * TILE_SIZE * currentZoom) - (scrollContainer.clientWidth / 2) + ((TILE_SIZE * currentZoom) / 2);
-            scrollContainer.scrollTop = ((row - 1) * TILE_SIZE * currentZoom) - (scrollContainer.clientHeight / 2) + ((TILE_SIZE * currentZoom) / 2);
+            let targetX = ((col - 1) * TILE_SIZE * currentZoom) + ((TILE_SIZE * currentZoom) / 2);
+            let targetY = ((row - 1) * TILE_SIZE * currentZoom) + ((TILE_SIZE * currentZoom) / 2);
+            scrollContainer.scrollLeft = targetX - (scrollContainer.clientWidth / 2);
+            scrollContainer.scrollTop = targetY - (scrollContainer.clientHeight / 2);
         }
 
         function centerViewport() {
@@ -448,13 +550,14 @@
             document.getElementById('food-val').innerText = `${food.used}/${food.max}`;
             document.getElementById('workforce-val').innerText = `${workforce.used}/${workforce.max}`;
             
-            breakdown.goldText = `INCOME (+${incomes.gold}/10s):\nExploration Base: +${breakdown.goldBase}\nConnected Towns: +${breakdown.goldTowns}\nActive Mines: +${breakdown.goldMines}`;
-            breakdown.woodText = `INCOME (+${incomes.wood}/10s):\nBase Income: +${breakdown.woodBase}\nLumber Mills: +${breakdown.woodMills}`;
-            breakdown.stoneText = `INCOME (+${incomes.stone}/10s):\nQuarries: +${breakdown.stoneQuarries}`;
+            breakdown.goldText = `INCOME (+${incomes.gold}/10s)\n\nExploration Base: +${breakdown.goldBase}\nConnected Towns: +${breakdown.goldTowns}\nActive Mines: +${breakdown.goldMines}`;
+            breakdown.woodText = `INCOME (+${incomes.wood}/10s)\n\nLumber Mills: ${lumberMillCount}`;
+            breakdown.stoneText = `INCOME (+${incomes.stone}/10s)\n\nQuarries: ${quarryCount}`;
+            
             breakdown.foodText = `PRODUCED (${food.max}):\nFarms: +${breakdown.foodFarms}\nFishing Boats: +${breakdown.foodBoats}\n\nCONSUMED (${food.used}):\nTowns/Capital: -${breakdown.foodTowns}\nHouses: -${breakdown.foodHouses}`;
             breakdown.wfText = `MAX WORKFORCE (${workforce.max}):\nBase Pool: +${breakdown.wfBase}\nHouses: +${breakdown.wfHouses}\nGuilds: +${breakdown.wfGuilds}\nSlime Penalties: -${breakdown.wfSlimePenalty}\n\nUSED WORKFORCE (${workforce.used}):\nMills: -${breakdown.wfMills}\nQuarries: -${breakdown.wfQuarries}\nMines: -${breakdown.wfMines}\nFarms: -${breakdown.wfFarms}\nBoats: -${breakdown.wfBoats}\nShipyards: -${breakdown.wfShipyards}`;
             
-            if(document.getElementById('quest-modal').style.display === 'flex') updateQuestUI();
+            updateQuestUI();
         }
 
         async function fetchMapData() {
@@ -493,9 +596,11 @@
                     resources.stone = parseInt(bankMatch[3]);
                 }
                 
-                centerViewport();
-                renderMap();
-                updateResourceUI();
+                setTimeout(() => {
+                    centerViewport();
+                    renderMap();
+                    updateResourceUI();
+                }, 150);
                 
                 if(questTier < QUESTS.length) {
                     let q = QUESTS[questTier];
@@ -530,13 +635,13 @@
             
             if (actionTypeStr) {
                 lastAnchorTile = { r: row - 1, c: col - 1, type: actionTypeStr };
-                showQuickBuildFab(actionTypeStr);
+                showQuickBuildOffer(actionTypeStr);
             }
             
             calculateNetworks(); 
             updateResourceUI();
             renderMap();
-            updateBottomPanel();
+            if(selectedTile) updateBottomPanel(); 
             
             updateQueue.push({row: row, col: col, value: value, user: currentUser});
             processUpdateQueue();
@@ -556,13 +661,25 @@
 
         function updateQuestUI() {
             let container = document.getElementById('quest-content');
+            let miniCounter = document.getElementById('quest-mini-counter');
+            let fabQuest = document.getElementById('fab-quest');
+
             if (questTier >= QUESTS.length) {
                 container.innerHTML = `<p style="color:#a0aec0; font-size:14px; text-align:center;">All current story quests completed!</p>`;
+                miniCounter.innerText = "Done";
+                fabQuest.style.backgroundColor = '#48bb78';
                 return;
             }
             let q = QUESTS[questTier];
             let completed = q.isComplete();
             
+            miniCounter.innerText = q.shortProgress ? q.shortProgress() : "Tracking";
+            if (completed) {
+                fabQuest.style.backgroundColor = '#48bb78';
+            } else {
+                fabQuest.style.backgroundColor = '#2d2d3d';
+            }
+
             let html = `
                 <p class="narrative">"${q.narrative}"</p>
                 <p style="font-size:15px; margin-bottom: 4px; color:white;"><b>Quest:</b> ${q.goal}</p>
@@ -592,9 +709,10 @@
         }
 
         // --- Core Base Logic ---
+        function isAlienSlimeType(rawTerr) { return rawTerr === 'AM' || rawTerr === 'AP' || rawTerr === 'AF'; }
         
         function isAlienSlime(rawTerr, st) {
-            return (rawTerr === 'AM' || rawTerr === 'AP' || rawTerr === 'AF') && st.startsWith('U') && !st.includes(':ClearedSlime');
+            return isAlienSlimeType(rawTerr) && st.startsWith('U') && !st.includes(':ClearedSlime');
         }
 
         function getEffectiveTerrain(rawTerr, st) {
@@ -673,7 +791,7 @@
             let terr = getEffectiveTerrain(rawTerr, st);
             
             let isConnected = st.startsWith('U') && (
-                st.includes(':Road') || st.includes(':Lane') || terr === 'T' || terr === 'C' || terr === 'BA' ||
+                st.includes(':Road') || st.includes(':Lane') || st.includes(':Boat') || terr === 'T' || terr === 'C' || terr === 'BA' ||
                 st.includes(':House') || st.includes(':LumberMill') || st.includes(':Quarry') || 
                 st.includes(':Mine') || st.includes(':Shipyard') || st.includes(':Farm')
             );
@@ -697,7 +815,7 @@
                     let nr = (row - 1) + dr; let nc = (col - 1) + dc;
                     if (nr >= 0 && nr < GRID_UNITS && nc >= 0 && nc < GRID_UNITS) {
                         let st = stateGrid[nr][nc] || '';
-                        if (st.startsWith('U') && (st.includes(':Shipyard') || st.includes(':Lane'))) return true;
+                        if (st.startsWith('U') && (st.includes(':Shipyard') || st.includes(':Lane') || st.includes(':Boat'))) return true;
                     }
                 }
             }
@@ -716,8 +834,22 @@
             }
             return false;
         }
+        
+        function isCoastal(r, c) {
+            const dirs = [[-1,0],[1,0],[0,-1],[0,1]]; // Orthogonal only for Shipyards
+            for (let d of dirs) {
+                let nr = r + d[0]; let nc = c + d[1];
+                if (nr >= 0 && nr < GRID_UNITS && nc >= 0 && nc < GRID_UNITS) {
+                    let nTerr = getEffectiveTerrain(mapGrid[nr][nc], stateGrid[nr][nc]);
+                    if (!isWaterType(nTerr) && nTerr !== 'WH') return true; 
+                }
+            }
+            return false;
+        }
 
-        function isWaterType(terr) { return terr === 'R' || terr === 'W' || terr === 'WF' || terr === 'DW' || terr === 'WBF' || terr === 'WA'; }
+        // Simple unit metrics helper for internal terrain evaluations
+        function isWaterType(terr) { return terr === 'W' || terr === 'WF' || terr === 'DW' || terr === 'WBF' || terr === 'WA'; }
+        function isRiverType(terr) { return terr === 'R' || terr === 'RBD'; }
 
         function isWheatField(r, c) {
             let st = stateGrid[r][c];
@@ -727,7 +859,7 @@
                 for (let d of dirs) {
                     let nr = r + d[0]; let nc = c + d[1];
                     if (nr >= 0 && nr < GRID_UNITS && nc >= 0 && nc < GRID_UNITS) {
-                        if (stateGrid[nr][nc].includes(':Farm')) return true;
+                        if (stateGrid[nr][nc] && stateGrid[nr][nc].includes(':Farm')) return true;
                     }
                 }
             }
@@ -735,10 +867,10 @@
         }
 
         function canBuildFord(r, c) {
-            let rTop = r > 0 && isWaterType(getEffectiveTerrain(mapGrid[r-1][c], stateGrid[r-1][c]));
-            let rBot = r < GRID_UNITS-1 && isWaterType(getEffectiveTerrain(mapGrid[r+1][c], stateGrid[r+1][c]));
-            let rLeft = c > 0 && isWaterType(getEffectiveTerrain(mapGrid[r][c-1], stateGrid[r][c-1]));
-            let rRight = c < GRID_UNITS-1 && isWaterType(getEffectiveTerrain(mapGrid[r][c+1], stateGrid[r][c+1]));
+            let rTop = r > 0 && (isWaterType(getEffectiveTerrain(mapGrid[r-1][c], stateGrid[r-1][c])) || isRiverType(getEffectiveTerrain(mapGrid[r-1][c], stateGrid[r-1][c])));
+            let rBot = r < GRID_UNITS-1 && (isWaterType(getEffectiveTerrain(mapGrid[r+1][c], stateGrid[r+1][c])) || isRiverType(getEffectiveTerrain(mapGrid[r+1][c], stateGrid[r+1][c])));
+            let rLeft = c > 0 && (isWaterType(getEffectiveTerrain(mapGrid[r][c-1], stateGrid[r][c-1])) || isRiverType(getEffectiveTerrain(mapGrid[r][c-1], stateGrid[r][c-1])));
+            let rRight = c < GRID_UNITS-1 && (isWaterType(getEffectiveTerrain(mapGrid[r][c+1], stateGrid[r][c+1])) || isRiverType(getEffectiveTerrain(mapGrid[r][c+1], stateGrid[r][c+1])));
 
             let isHoriz = (rLeft || rRight) && !rTop && !rBot;
             let isVert = (rTop || rBot) && !rLeft && !rRight;
@@ -806,6 +938,12 @@
             workforce.used = 0; workforce.max = 10;
             food.used = 0; food.max = 0;
             
+            for (let r = 0; r < GRID_UNITS; r++) {
+                for (let c = 0; c < GRID_UNITS; c++) {
+                    networkGrid[r][c] = false;
+                }
+            }
+            
             breakdown = {
                 goldBase: 0, goldTowns: 0, goldMines: 0,
                 woodBase: 0, woodMills: 0, stoneQuarries: 0,
@@ -861,6 +999,7 @@
                 let curr = queue.shift();
                 if(visited[curr.r][curr.c]) continue;
                 visited[curr.r][curr.c] = true;
+                networkGrid[curr.r][curr.c] = true; 
 
                 let rawTerr = mapGrid[curr.r][curr.c];
                 let terr = getEffectiveTerrain(rawTerr, stateGrid[curr.r][curr.c]);
@@ -878,7 +1017,16 @@
                         let st = stateGrid[nr][nc];
                         if(st.startsWith('U') && !visited[nr][nc]) {
                             let nTerr = getEffectiveTerrain(mapGrid[nr][nc], st);
-                            if(st.includes(':Road') || st.includes(':Lane') || st.includes(':Shipyard') || nTerr === 'C' || nTerr === 'T' || nTerr === 'BA' || nTerr === 'WH') {
+                            
+                            // Let the network pathflow through literally any built structure or town node
+                            let isTraversable = st.includes(':Road') || st.includes(':Lane') || 
+                                                st.includes(':Boat') || st.includes(':Shipyard') || 
+                                                st.includes(':House') || st.includes(':LumberMill') || 
+                                                st.includes(':Quarry') || st.includes(':Mine') || 
+                                                st.includes(':Farm') || nTerr === 'C' || 
+                                                nTerr === 'T' || nTerr === 'BA' || nTerr === 'WH';
+
+                            if(isTraversable) {
                                 queue.push({r: nr, c: nc});
                             }
                         }
@@ -889,10 +1037,10 @@
 
         // --- Render Draw Engine ---
         function drawSmartRiver(x, y, r, c) {
-            let rTop = r > 0 && isWaterType(getEffectiveTerrain(mapGrid[r-1][c], stateGrid[r-1][c]));
-            let rBot = r < GRID_UNITS-1 && isWaterType(getEffectiveTerrain(mapGrid[r+1][c], stateGrid[r+1][c]));
-            let rLeft = c > 0 && isWaterType(getEffectiveTerrain(mapGrid[r][c-1], stateGrid[r][c-1]));
-            let rRight = c < GRID_UNITS-1 && isWaterType(getEffectiveTerrain(mapGrid[r][c+1], stateGrid[r][c+1]));
+            let rTop = r > 0 && (isWaterType(getEffectiveTerrain(mapGrid[r-1][c], stateGrid[r-1][c])) || isRiverType(getEffectiveTerrain(mapGrid[r-1][c], stateGrid[r-1][c])));
+            let rBot = r < GRID_UNITS-1 && (isWaterType(getEffectiveTerrain(mapGrid[r+1][c], stateGrid[r+1][c])) || isRiverType(getEffectiveTerrain(mapGrid[r+1][c], stateGrid[r+1][c])));
+            let rLeft = c > 0 && (isWaterType(getEffectiveTerrain(mapGrid[r][c-1], stateGrid[r][c-1])) || isRiverType(getEffectiveTerrain(mapGrid[r][c-1], stateGrid[r][c-1])));
+            let rRight = c < GRID_UNITS-1 && (isWaterType(getEffectiveTerrain(mapGrid[r][c+1], stateGrid[r][c+1])) || isRiverType(getEffectiveTerrain(mapGrid[r][c+1], stateGrid[r][c+1])));
 
             ctx.fillStyle = '#3182ce';
             let thick = 16; let offset = (TILE_SIZE - thick) / 2; let half = TILE_SIZE / 2;
@@ -930,6 +1078,7 @@
         function renderMap() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.lineWidth = 1;
+            let now = Date.now();
 
             for (let r = 0; r < GRID_UNITS; r++) {
                 for (let c = 0; c < GRID_UNITS; c++) {
@@ -944,27 +1093,47 @@
 
                     let currentStyle = (isUncovered || isHalfFog) ? (TERRAIN_STYLES[effTerr] || TERRAIN_STYLES['P']) : TERRAIN_STYLES['H_FOG'];
 
-                    if (isHalfFog) ctx.filter = 'grayscale(100%) opacity(60%)';
-                    ctx.fillStyle = currentStyle.color;
-                    ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                    if (isHalfFog) {
+                        ctx.fillStyle = effTerr === 'BA' ? '#d53f8c' : currentStyle.color;
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
 
-                    if ((isUncovered || isHalfFog) && effTerr === 'R') drawSmartRiver(x, y, r, c);
-                    
-                    if (isUncovered) {
+                        if (effTerr === 'R' || effTerr === 'RBD') drawSmartRiver(x, y, r, c);
+
+                        if (currentStyle.text) {
+                            ctx.fillStyle = "#ffffff";
+                            ctx.font = "14px sans-serif";
+                            ctx.textAlign = "center";
+                            ctx.textBaseline = "middle";
+                            ctx.fillText(currentStyle.text, x + TILE_SIZE/2, y + TILE_SIZE/2);
+                        }
+
+                        ctx.fillStyle = 'rgba(15, 15, 20, 0.65)';
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                        ctx.strokeStyle = '#232330';
+                        ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
+                        
+                    } else if (isUncovered) {
+                        
+                        if (effTerr === 'BA') {
+                            ctx.fillStyle = networkGrid[r][c] ? '#DBD370' : '#d53f8c'; 
+                        } else {
+                            ctx.fillStyle = currentStyle.color;
+                        }
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+
+                        if (effTerr === 'R' || effTerr === 'RBD') drawSmartRiver(x, y, r, c);
+                        
                         if (state.includes(':Road')) drawSmartRoad(x, y, r, c, false);
                         if (state.includes(':Lane')) drawSmartRoad(x, y, r, c, true);
-                    }
-                    
-                    if (isHalfFog) ctx.filter = 'none'; 
-                    ctx.strokeStyle = '#232330';
-                    ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
+                        
+                        ctx.strokeStyle = '#232330';
+                        ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
 
-                    ctx.fillStyle = "#ffffff";
-                    ctx.font = "14px sans-serif";
-                    ctx.textAlign = "center";
-                    ctx.textBaseline = "middle";
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = "14px sans-serif";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
 
-                    if (isUncovered) {
                         if (currentStyle.text) ctx.fillText(currentStyle.text, x + TILE_SIZE/2, y + TILE_SIZE/2);
                         
                         let stP = stateGrid[r][c] || '';
@@ -989,10 +1158,27 @@
                         if (state.includes(':Shipyard')) ctx.fillText('⚓', x + TILE_SIZE/2, y + TILE_SIZE/2);
                         if (state.includes(':Farm')) ctx.fillText('🚜', x + TILE_SIZE/2, y + TILE_SIZE/2);
                         if (state.includes(':Boat')) ctx.fillText('⛵', x + TILE_SIZE/2, y + TILE_SIZE/2);
-                    } else if (isHalfFog) {
-                        ctx.filter = 'grayscale(100%) opacity(60%)';
-                        if (currentStyle.text) ctx.fillText(currentStyle.text, x + TILE_SIZE/2, y + TILE_SIZE/2);
-                        ctx.filter = 'none';
+                        
+                        let key = `${r+1}-${c+1}`;
+                        if (harvestData[key] && harvestData[key].clicks >= 10) {
+                            let elapsed = now - harvestData[key].lastClick;
+                            if (elapsed < 20000) {
+                                let progress = 1 - (elapsed / 20000);
+                                let perimeter = (TILE_SIZE - 2) * 4;
+                                ctx.strokeStyle = '#e53e3e';
+                                ctx.lineWidth = 2;
+                                ctx.setLineDash([perimeter * progress, perimeter]);
+                                ctx.strokeRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+                                ctx.setLineDash([]);
+                                ctx.lineWidth = 1;
+                            }
+                        }
+
+                    } else {
+                        ctx.fillStyle = TERRAIN_STYLES['H_FOG'].color;
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                        ctx.strokeStyle = '#232330';
+                        ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
                     }
 
                     if (selectedTile && selectedTile.row === r + 1 && selectedTile.col === c + 1) {
@@ -1014,6 +1200,18 @@
 
         canvas.addEventListener('click', (e) => {
             if (!currentUser) return;
+            
+            // Intercept check for genuine drag vs simple click
+            if (isDraggingMap) return;
+            
+            if (activeQbType !== null) {
+                if (!quickBuildActive && !justBuilt) {
+                    document.getElementById('quick-build-offer').style.display = 'none';
+                    activeQbType = null; quickBuildActive = false;
+                }
+            }
+            justBuilt = false;
+
             const rect = canvas.getBoundingClientRect();
             const col = Math.floor((e.clientX - rect.left) / (TILE_SIZE * currentZoom)) + 1;
             const row = Math.floor((e.clientY - rect.top) / (TILE_SIZE * currentZoom)) + 1;
@@ -1022,12 +1220,81 @@
                 let state = stateGrid[row - 1][col - 1] || 'H';
                 let rawTerr = mapGrid[row - 1][col - 1] || 'P';
                 let effTerr = getEffectiveTerrain(rawTerr, state);
+                let rIdx = row - 1; let cIdx = col - 1;
                 
+                if (quickBuildActive && activeQbType && lastAnchorTile) {
+                    let isLine = (lastAnchorTile.r === rIdx || lastAnchorTile.c === cIdx);
+                    let path = []; let valid = true;
+                    
+                    if (isLine) {
+                        let minR = Math.min(rIdx, lastAnchorTile.r); let maxR = Math.max(rIdx, lastAnchorTile.r);
+                        let minC = Math.min(cIdx, lastAnchorTile.c); let maxC = Math.max(cIdx, lastAnchorTile.c);
+                        if (lastAnchorTile.r === rIdx) for (let c = minC; c <= maxC; c++) path.push({r: rIdx, c: c});
+                        else for (let r = minR; r <= maxR; r++) path.push({r: r, c: cIdx});
+                    } else {
+                        path.push({r: rIdx, c: cIdx}); 
+                    }
+                    
+                    let toBuild = [];
+                    let actionKey = activeQbType; 
+                    
+                    for (let pt of path) {
+                        let ptSt = stateGrid[pt.r][pt.c];
+                        let ptTerr = getEffectiveTerrain(mapGrid[pt.r][pt.c], ptSt);
+                        
+                        if (ptSt.includes(`:${actionKey}`)) continue; 
+                        if (!ptSt.startsWith('U')) { valid = false; break; }
+                        
+                        if (actionKey === 'Road') {
+                            if (capitalTier < 1 || ['M','H','W','DW','WF','WBF','WA','T','C','BA','FWD','MCR','PG'].includes(ptTerr) || (ptTerr && typeof ptTerr === 'string' && ptTerr.startsWith('WH')) || isWheatField(pt.r, pt.c) || isAlienSlime(mapGrid[pt.r][pt.c], ptSt) || (ptTerr === 'R' && !canBuildFord(pt.r, pt.c))) valid = false;
+                        } else if (actionKey === 'Lane') {
+                            if (capitalTier < 2 || (!['W','WF','WBF','DW','WA'].includes(ptTerr))) valid = false;
+                        } else if (actionKey === 'Cleared') {
+                            if (capitalTier < 3 || ptTerr !== 'F') valid = false;
+                        } else if (actionKey === 'Planted') {
+                            if (capitalTier < 3 || ptTerr !== 'P' || isWheatField(pt.r, pt.c)) valid = false;
+                        }
+                        if (!valid) break;
+                        toBuild.push(pt);
+                    }
+                    
+                    if (valid && toBuild.length > 0) {
+                        let unitCost = (actionKey === 'Road') ? COSTS.road : (actionKey === 'Lane') ? COSTS.lane : COSTS.terraform;
+                        let totalCost = toBuild.length * unitCost;
+                        
+                        if (resources.gold >= totalCost) {
+                            resources.gold -= totalCost;
+                            spawnFloatingText(`-${totalCost} Gold`, e.clientX, e.clientY);
+                            toBuild.forEach(pt => {
+                                let currentSt = stateGrid[pt.r][pt.c];
+                                let newState;
+                                if (actionKey === 'Cleared') {
+                                    newState = currentSt.replace(/:Planted/g, '').replace(/:Cleared/g, '') + ':Cleared';
+                                } else if (actionKey === 'Planted') {
+                                    newState = currentSt.replace(/:Cleared/g, '').replace(/:Planted/g, '') + ':Planted';
+                                } else {
+                                    newState = currentSt + ':' + actionKey;
+                                }
+                                pushTileUpdate(pt.r + 1, pt.c + 1, newState, actionKey);
+                            });
+                            lastAnchorTile = { r: rIdx, c: cIdx, type: actionKey }; 
+                            return; 
+                        } else {
+                            spawnFloatingText("Not enough gold!", e.clientX, e.clientY, '#fc8181');
+                            return;
+                        }
+                    } else if (path.length > 1) {
+                        spawnFloatingText("Path blocked!", e.clientX, e.clientY, '#fc8181');
+                        return;
+                    }
+                }
+
                 let isMill = state.includes(':LumberMill');
                 let isQuarry = state.includes(':Quarry');
                 let isCapital = (effTerr === 'C');
+                let isTown = (effTerr === 'T' && hasNetworkConnection(row-1, col-1));
                 
-                if (state.startsWith('U') && (isMill || isQuarry || isCapital)) {
+                if (state.startsWith('U') && (isMill || isQuarry || isCapital || isTown)) {
                     let key = `${row}-${col}`;
                     if (!harvestData[key]) harvestData[key] = { clicks: 0, lastClick: 0 };
                     
@@ -1040,18 +1307,19 @@
                         harvestData[key].clicks++;
                         harvestData[key].lastClick = now;
                         if (isMill) {
-                            resources.wood = Math.min(globalStorageCap, resources.wood + 1);
+                            resources.wood += 1;
                             spawnFloatingText("+1 Wood", e.clientX, e.clientY, '#48bb78');
                         } else if (isQuarry) {
-                            resources.stone = Math.min(globalStorageCap, resources.stone + 1);
+                            resources.stone += 1;
                             spawnFloatingText("+1 Stone", e.clientX, e.clientY, '#a0aec0');
-                        } else if (isCapital) {
-                            let taxAmt = 10 * capitalTier;
-                            resources.gold = Math.min(globalGoldCap, resources.gold + taxAmt);
+                        } else if (isCapital || isTown) {
+                            let taxAmt = isCapital ? (10 * capitalTier) : 10;
+                            resources.gold += taxAmt;
                             spawnFloatingText(`+${taxAmt} Gold`, e.clientX, e.clientY, '#f1c40f');
-                            if (questTier === 0) questCapitalTaps++;
+                            if (isCapital && questTier === 0) questCapitalTaps++;
                         }
                         updateResourceUI();
+                        renderMap(); 
                     } else {
                         spawnFloatingText("Depleted! Wait 20s", e.clientX, e.clientY, '#fc8181');
                     }
@@ -1061,14 +1329,16 @@
                     if (isOrthogonalToUncovered(row, col)) {
                         let cost = 10 + (Math.max(Math.abs(row - capitalPos.row), Math.abs(col - capitalPos.col)) * 2);
                         
-                        if (rawTerr === 'DW' && !state.includes(':Tap1')) {
-                            cost *= 2; 
-                            if (resources.gold < cost) { spawnFloatingText("Insufficient funds!", e.clientX, e.clientY, '#fc8181'); return; }
-                            resources.gold -= cost; spawnFloatingText(`-${cost} Gold`, e.clientX, e.clientY, '#f6e05e');
-                            pushTileUpdate(row, col, state + ':Tap1');
-                            return; 
-                        } else if (rawTerr === 'DW' && state.includes(':Tap1')) {
-                            cost *= 2; 
+                        if (rawTerr === 'DW' || isAlienSlimeType(rawTerr)) {
+                            if (!state.includes(':Tap1')) {
+                                cost *= 2; 
+                                if (resources.gold < cost) { spawnFloatingText("Insufficient funds!", e.clientX, e.clientY, '#fc8181'); return; }
+                                resources.gold -= cost; spawnFloatingText(`-${cost} Gold`, e.clientX, e.clientY, '#f6e05e');
+                                pushTileUpdate(row, col, state + ':Tap1');
+                                return; 
+                            } else {
+                                cost *= 2; 
+                            }
                         }
                         
                         if (resources.gold < cost) {
@@ -1093,7 +1363,7 @@
                         }
                         if (rawTerr === 'WA') {
                             showDialogue("Atlantis Found", "You found a great underwater city! Loot for 2000 Gold.", "Claim", () => {
-                                resources.gold = Math.min(globalGoldCap, resources.gold + 2000);
+                                resources.gold += 2000;
                                 updateResourceUI(); pushTileUpdate(row, col, 'U:Looted'); 
                             });
                         }
@@ -1105,12 +1375,6 @@
                     selectedTile = { row, col };
                     document.getElementById('bottom-panel').classList.add('active');
                     
-                    if (state.includes(':Road')) showQuickBuildFab('Road');
-                    else if (state.includes(':Lane')) showQuickBuildFab('Lane');
-                    else if (state.includes(':Cleared')) showQuickBuildFab('Cleared');
-                    else if (state.includes(':Planted')) showQuickBuildFab('Planted');
-                    
-                    // Allow triggering Wormhole even after it's uncovered!
                     if (rawTerr && typeof rawTerr === 'string' && rawTerr.startsWith('WH')) {
                         showDialogue("Deep Cave", "You stand before a deep cave. Do you go inside?", "Yes", () => {
                             showInfoModal("Wormhole", "It seems to be some sort of portal that defies logic...");
@@ -1139,16 +1403,8 @@
             
             document.getElementById('ui-coord').innerText = `R: ${selectedTile.row}, C: ${selectedTile.col}`;
             
-            const isUncovered = state.startsWith('U');
-            let styleObj = TERRAIN_STYLES[terr] || TERRAIN_STYLES['P'];
-            document.getElementById('ui-terrain').innerText = isUncovered ? styleObj.label : "Obscured Haze";
-            
-            let parts = state.split(':');
-            let builtString = parts.find(p => p !== 'U' && p !== 'ExpandedBA' && p !== 'Cleared' && p !== 'Planted' && !p.startsWith('Cap') && !p.startsWith('Q') && !p.startsWith('FH') && !p.startsWith('Bank') && !p.startsWith('Tap') && !p.startsWith('Looted') && !p.startsWith('ClearedSlime'));
-            document.getElementById('ui-built').innerText = builtString ? builtString : "Open Land";
-
             let infoText = "-";
-            if (isUncovered) {
+            if (state.startsWith('U')) {
                 if (terr === 'C') infoText = `Generating ${exploredCount} Gold / 10s\nConsuming 5 Food`;
                 else if (terr === 'T') infoText = `Generating 15 Gold / 10s (If Conn)\nConsuming 5 Food`;
                 else if (state.includes(':House')) infoText = `Providing 5 Workforce\nConsuming 1 Food`;
@@ -1168,10 +1424,10 @@
             const actionsContainer = document.getElementById('ui-actions');
             actionsContainer.innerHTML = '';
 
-            if (!isUncovered) {
+            if (!state.startsWith('U')) {
                 let cost = 10 + (Math.max(Math.abs(selectedTile.row - capitalPos.row), Math.abs(selectedTile.col - capitalPos.col)) * 2);
-                if (rawTerr === 'DW' && !state.includes(':Tap1')) cost *= 2; 
-                else if (rawTerr === 'DW' && state.includes(':Tap1')) cost *= 2;
+                if ((rawTerr === 'DW' || isAlienSlimeType(rawTerr)) && !state.includes(':Tap1')) cost *= 2; 
+                else if ((rawTerr === 'DW' || isAlienSlimeType(rawTerr)) && state.includes(':Tap1')) cost *= 2;
                 
                 let btn = document.createElement('button');
                 btn.style.backgroundColor = '#38a169';
@@ -1180,7 +1436,7 @@
                 btn.onclick = (e) => { 
                     resources.gold -= cost; spawnFloatingText(`-${cost} Gold`, e.clientX, e.clientY);
                     
-                    if (rawTerr === 'DW' && !state.includes(':Tap1')) {
+                    if ((rawTerr === 'DW' || isAlienSlimeType(rawTerr)) && !state.includes(':Tap1')) {
                         pushTileUpdate(selectedTile.row, selectedTile.col, state + ':Tap1');
                     } else {
                         pushTileUpdate(selectedTile.row, selectedTile.col, 'U'); 
@@ -1198,7 +1454,7 @@
                         }
                         if (rawTerr === 'WA') {
                             showDialogue("Atlantis Found", "You found a great underwater city! Loot for 2000 Gold.", "Claim", () => {
-                                resources.gold = Math.min(globalGoldCap, resources.gold + 2000);
+                                resources.gold += 2000;
                                 updateResourceUI(); pushTileUpdate(selectedTile.row, selectedTile.col, 'U:Looted'); 
                             });
                         }
@@ -1207,18 +1463,18 @@
                 actionsContainer.appendChild(btn);
             } else {
                 let baseStateStr = getBaseStateString(state);
+                let builtString = state.split(':').find(p => p !== 'U' && p !== 'ExpandedBA' && p !== 'Cleared' && p !== 'Planted' && !p.startsWith('Cap') && !p.startsWith('Q') && !p.startsWith('FH') && !p.startsWith('Bank') && !p.startsWith('Tap') && !p.startsWith('Looted') && !p.startsWith('ClearedSlime'));
                 
-                // --- ONE-TIME POI INTERACTIONS ---
                 if (terr === 'MCR' && !state.includes(':Looted')) {
                     let btn = document.createElement('button'); btn.style.backgroundColor = '#d69e2e'; 
                     btn.innerText = `Loot Ruins (Collect 200 Stone)`;
-                    btn.onclick = () => { resources.stone = Math.min(globalStorageCap, resources.stone + 200); updateResourceUI(); pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Looted'); };
+                    btn.onclick = () => { resources.stone += 200; updateResourceUI(); pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Looted'); };
                     actionsContainer.appendChild(btn);
                 }
                 if (terr === 'RBD' && !state.includes(':Looted')) {
                     let btn = document.createElement('button'); btn.style.backgroundColor = '#d69e2e'; 
                     btn.innerText = `Clear Dam (Collect 50 Wood)`;
-                    btn.onclick = () => { resources.wood = Math.min(globalStorageCap, resources.wood + 50); updateResourceUI(); pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Looted'); };
+                    btn.onclick = () => { resources.wood += 50; updateResourceUI(); pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Looted'); };
                     actionsContainer.appendChild(btn);
                 }
                 if (isAlienSlime(rawTerr, state)) {
@@ -1247,17 +1503,18 @@
                     btn.onclick = () => { 
                         resources.wood -= woodCost; resources.stone -= stoneCost; 
                         pushTileUpdate(selectedTile.row, selectedTile.col, `${state.replace(/:Cap\d+/, '')}:Cap${nextTier}`); 
+                        let unlocks = nextTier === 2 ? "• Shipyards\n• Fishing Boats\n• Shipping Lanes" : "• Gold Mines\n• Forest Clearing\n• Forest Planting";
+                        showDialogue(`Capital Upgraded!`, `Your capital is now Level ${nextTier}!\n\nNew Unlocks:\n${unlocks}`, "Awesome!", () => {});
                     };
                     actionsContainer.appendChild(btn);
                 }
 
                 if (!builtString && terr !== 'C') {
                     
-                    // --- RE-ADDED ADJACENCY VARIABLES HERE ---
                     let canAttach = hasBuildingAdjacency(selectedTile.row, selectedTile.col);
                     let canAttachLane = hasLaneAdjacency(selectedTile.row, selectedTile.col);
                     
-                    if (terr === 'F' && !state.includes(':Planted')) {
+                    if (terr === 'F') {
                         let cost = COSTS.terraform;
                         let btn = document.createElement('button'); btn.style.backgroundColor = '#d69e2e'; 
                         let tierTxt = capitalTier < 3 ? ` <span style="color:#fc8181">(Lvl 3 Cap Req)</span>` : '';
@@ -1266,12 +1523,12 @@
                             btn.disabled = true; btn.title = "Requires Capital Level 3.";
                         } else {
                             btn.disabled = resources.gold < cost; 
-                            btn.onclick = () => { resources.gold -= cost; pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Cleared', 'Cleared'); };
+                            btn.onclick = () => { resources.gold -= cost; pushTileUpdate(selectedTile.row, selectedTile.col, state.replace(/:Planted/g, '').replace(/:Cleared/g, '') + ':Cleared', 'Cleared'); };
                         }
                         actionsContainer.appendChild(btn);
                     }
                     
-                    if (terr === 'P' && !state.includes(':Cleared') && !isWheatField(rIdx, cIdx)) {
+                    if (terr === 'P' && !isWheatField(rIdx, cIdx)) {
                         let cost = COSTS.terraform;
                         let btn = document.createElement('button'); btn.style.backgroundColor = '#2f855a'; 
                         let tierTxt = capitalTier < 3 ? ` <span style="color:#fc8181">(Lvl 3 Cap Req)</span>` : '';
@@ -1280,77 +1537,26 @@
                             btn.disabled = true; btn.title = "Requires Capital Level 3.";
                         } else {
                             btn.disabled = resources.gold < cost; 
-                            btn.onclick = () => { resources.gold -= cost; pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Planted', 'Planted'); };
+                            btn.onclick = () => { resources.gold -= cost; pushTileUpdate(selectedTile.row, selectedTile.col, state.replace(/:Cleared/g, '').replace(/:Planted/g, '') + ':Planted', 'Planted'); };
                         }
                         actionsContainer.appendChild(btn);
                     }
-
-                    // --- QUICK BUILD EVALUATOR ---
-                    if (quickBuildActive && activeQbType && (lastAnchorTile.r === rIdx || lastAnchorTile.c === cIdx)) {
-                        let path = []; let valid = true;
-                        let minR = Math.min(rIdx, lastAnchorTile.r); let maxR = Math.max(rIdx, lastAnchorTile.r);
-                        let minC = Math.min(cIdx, lastAnchorTile.c); let maxC = Math.max(cIdx, lastAnchorTile.c);
-                        
-                        if (lastAnchorTile.r === rIdx) for (let c = minC; c <= maxC; c++) path.push({r: rIdx, c: c});
-                        else for (let r = minR; r <= maxR; r++) path.push({r: r, c: cIdx});
-                        
-                        let toBuild = [];
-                        let actionKey = activeQbType; 
-                        
-                        for (let pt of path) {
-                            let ptSt = stateGrid[pt.r][pt.c];
-                            let ptTerr = getEffectiveTerrain(mapGrid[pt.r][pt.c], ptSt);
-                            
-                            if (ptSt.includes(`:${actionKey}`)) continue; 
-                            if (!ptSt.startsWith('U')) { valid = false; break; }
-                            
-                            if (actionKey === 'Road') {
-                                if (capitalTier < 1 || ['M','H','W','DW','WF','WBF','WA','T','C','BA','FWD','MCR','PG'].includes(ptTerr) || (ptTerr && typeof ptTerr === 'string' && ptTerr.startsWith('WH')) || isWheatField(pt.r, pt.c) || isAlienSlime(mapGrid[pt.r][pt.c], ptSt) || (ptTerr === 'R' && !canBuildFord(pt.r, pt.c))) valid = false;
-                            } else if (actionKey === 'Lane') {
-                                if (capitalTier < 2 || (!['W','WF','WBF','DW','WA'].includes(ptTerr))) valid = false;
-                            } else if (actionKey === 'Cleared') {
-                                if (capitalTier < 3 || ptTerr !== 'F' || ptSt.includes(':Planted')) valid = false;
-                            } else if (actionKey === 'Planted') {
-                                if (capitalTier < 3 || ptTerr !== 'P' || ptSt.includes(':Cleared') || isWheatField(pt.r, pt.c)) valid = false;
-                            }
-                            if (!valid) break;
-                            toBuild.push(pt);
-                        }
-                        
-                        if (valid && toBuild.length > 0) {
-                            let unitCost = (actionKey === 'Road') ? COSTS.road : (actionKey === 'Lane') ? COSTS.lane : COSTS.terraform;
-                            let totalCost = toBuild.length * unitCost;
-                            
-                            let btn = document.createElement('button');
-                            btn.style.backgroundColor = '#d69e2e';
-                            btn.innerHTML = `Quick ${actionKey} Line (<span class="${resources.gold < totalCost ? 'req-missing' : ''}">${totalCost} Gold</span>)`;
-                            btn.disabled = resources.gold < totalCost;
-                            btn.onclick = () => {
-                                resources.gold -= totalCost;
-                                toBuild.forEach(pt => {
-                                    let bSt = getBaseStateString(stateGrid[pt.r][pt.c]);
-                                    pushTileUpdate(pt.r + 1, pt.c + 1, `${bSt}:${actionKey}`, actionKey);
-                                });
-                            };
-                            actionsContainer.appendChild(btn);
-                        } else {
-                            let p = document.createElement('p'); p.style.color = '#fc8181'; p.style.fontSize = '12px'; p.innerText = "Obstacles/Tier limits detected in Quick Build path."; actionsContainer.appendChild(p);
-                        }
-                    } 
                     
-                    // --- STANDARD BUILDING BUTTONS ---
-                    if (!isWaterType(terr) && !['FWD', 'MCR', 'PG'].includes(terr) && !(terr && typeof terr === 'string' && terr.startsWith('WH')) && !isAlienSlime(rawTerr, state) && !isWheatField(rIdx, cIdx)) {
+                    if (!isWaterType(terr) && !['FWD', 'WH', 'MCR', 'PG', 'H', 'M'].includes(terr) && !(terr && typeof terr === 'string' && terr.startsWith('WH')) && !isAlienSlime(rawTerr, state) && !isWheatField(rIdx, cIdx)) {
                         createBuildBtn(actionsContainer, 'Build Access Road', 'gold', COSTS.road, 'Road', canAttach, baseStateStr, 0, 0, 'Road', null, 1);
                     }
 
-                    if (terr === 'R' && !isWheatField(rIdx, cIdx)) {
+                    if (isRiverType(terr) && !isWheatField(rIdx, cIdx)) {
                         let canFord = canBuildFord(rIdx, cIdx);
                         createBuildBtn(actionsContainer, 'Build River Ford', 'gold', COSTS.road, 'Road', canFord, baseStateStr, 0, 0, 'Road', null, 1);
                         if (!canFord) { let p = document.createElement('p'); p.style.color = '#fc8181'; p.style.fontSize = '12px'; p.innerText = "Fords require perpendicular road connection."; actionsContainer.appendChild(p); }
                     }
 
                     if (isWaterType(terr) && terr !== 'R') {
-                        createBuildBtn(actionsContainer, 'Build Shipyard', 'wood', COSTS.shipyard, 'Shipyard', canAttach, baseStateStr, WORKFORCE_COSTS.shipyard, 0, null, null, 2);
+                        let coastal = isCoastal(rIdx, cIdx);
+                        if (coastal) {
+                            createBuildBtn(actionsContainer, 'Build Shipyard', 'wood', COSTS.shipyard, 'Shipyard', canAttach, baseStateStr, WORKFORCE_COSTS.shipyard, 0, null, null, 2);
+                        }
                         createBuildBtn(actionsContainer, 'Establish Shipping Lane', 'gold', COSTS.lane, 'Lane', canAttachLane, baseStateStr, 0, 0, 'Lane', null, 2);
                         
                         let globalBoatCap = shipyardCount * 2;
@@ -1405,17 +1611,15 @@
 
         function gameTick() {
             if (!currentUser) return;
-            lastTickTime = Date.now(); 
             
-            breakdown.goldBase = exploredCount;
-            breakdown.goldTowns = connectedTownsCount * 15;
+            breakdown.goldMines = 0; breakdown.woodMills = 0; breakdown.stoneQuarries = 0;
+            breakdown.goldBase = exploredCount; breakdown.goldTowns = connectedTownsCount * 15;
             incomes = { gold: breakdown.goldBase + breakdown.goldTowns, wood: breakdown.woodBase, stone: 0 };
             
             for (let r = 0; r < GRID_UNITS; r++) {
                 for (let c = 0; c < GRID_UNITS; c++) {
                     let state = stateGrid[r][c];
-
-                    if (state.startsWith('U')) {
+                    if (state && state.startsWith('U')) {
                         if (state.includes(':Mine')) { incomes.gold += 15; breakdown.goldMines += 15; }
                         if (state.includes(':LumberMill')) { let fb = 1 + getLumberBonus(r, c); incomes.wood += fb; breakdown.woodMills += fb; }
                         if (state.includes(':Quarry')) { let qb = 1 + getQuarryBonus(r, c); incomes.stone += qb; breakdown.stoneQuarries += qb; }
@@ -1423,10 +1627,11 @@
                 }
             }
 
-            resources.gold = Math.min(globalGoldCap, resources.gold + incomes.gold);
-            resources.wood = Math.min(globalStorageCap, resources.wood + incomes.wood);
-            resources.stone = Math.min(globalStorageCap, resources.stone + incomes.stone);
+            if (resources.gold < globalGoldCap) resources.gold = Math.min(globalGoldCap, resources.gold + incomes.gold);
+            if (resources.wood < globalStorageCap) resources.wood = Math.min(globalStorageCap, resources.wood + incomes.wood);
+            if (resources.stone < globalStorageCap) resources.stone = Math.min(globalStorageCap, resources.stone + incomes.stone);
             
+            lastTickTime = Date.now(); 
             updateResourceUI();
         }
     </script>
