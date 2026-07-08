@@ -204,7 +204,7 @@
         
         let connectedTownsCount = 0, exploredCount = 0, discoveredTownsCount = 0;
         let shipyardCount = 0, boatCount = 0;
-        let farmCount = 0, lumberMillCount = 0, quarryCount = 0, questCapitalTaps = 0; 
+        let farmCount = 0, lumberMillCount = 0, quarryCount = 0, questCapitalTaps = 0, tenementHouseCount = 0; 
 
         let resources = { gold: 0, wood: 60, stone: 10 };
         let incomes = { gold: 0, wood: 0, stone: 0 };
@@ -268,11 +268,20 @@
             {
                 narrative: "Your kingdom is growing, we will need resources to keep expanding.",
                 goal: "Build a Lumber Mill",
-                reward: "60 Stone",
+                reward: "50 Wood",
                 isComplete: () => lumberMillCount >= 1,
                 progress: () => `${Math.min(lumberMillCount, 1)}/1 Lumber Mill`, 
                 shortProgress: () => `${Math.min(lumberMillCount, 1)}/1`,
-                claim: () => { resources.stone += 60; updateCapitalData(4, 0); }
+                claim: () => { resources.wood += 50; updateCapitalData(4, 0); }
+            },
+            {
+                narrative: "You will need more workers to send to the mines and mills. We can build houses in towns to grow our population.",
+                goal: "Build two tenement houses",
+                reward: "60 Stone",
+                isComplete: () => tenementHouseCount >= 2,
+                progress: () => `${Math.min(tenementHouseCount, 2)}/2 Houses`, 
+                shortProgress: () => `${Math.min(tenementHouseCount, 2)}/2`,
+                claim: () => { resources.stone += 60; updateCapitalData(5, 0); }
             },
             {
                 narrative: "Head to the mountains, there are resources to plunder there too.",
@@ -283,7 +292,7 @@
                 shortProgress: () => `${Math.min(quarryCount, 1)}/1`,
                 claim: () => { 
                     resources.wood += 100; resources.stone += 100; 
-                    updateCapitalData(5, 0); 
+                    updateCapitalData(6, 0); 
                 }
             }
         ];
