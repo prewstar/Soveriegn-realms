@@ -943,7 +943,7 @@
 
         function calculateNetworks() {
             exploredCount = 0; discoveredTownsCount = 0;
-            shipyardCount = 0; boatCount = 0; farmCount = 0; lumberMillCount = 0; quarryCount = 0;
+            shipyardCount = 0; boatCount = 0; farmCount = 0; lumberMillCount = 0; quarryCount = 0; tenementHouseCount = 0;
             workforce.used = 0; workforce.max = 10;
             food.used = 0; food.max = 0;
             
@@ -982,7 +982,7 @@
                         }
 
                         if (terr === 'C' || terr === 'T') { food.used += 5; breakdown.foodTowns += 5; }
-                        if (st.includes(':House')) { workforce.max += 5; breakdown.wfHouses += 5; food.used += 1; breakdown.foodHouses += 1; }
+                        if (st.includes(':House')) { tenementHouseCount++; workforce.max += 5; breakdown.wfHouses += 5; food.used += 1; breakdown.foodHouses += 1; }
 
                         if (st.includes(':Shipyard')) { shipyardCount++; workforce.used += WORKFORCE_COSTS.shipyard; breakdown.wfShipyards += WORKFORCE_COSTS.shipyard; }
                         if (st.includes(':Boat')) { boatCount++; workforce.used += WORKFORCE_COSTS.boat; breakdown.wfBoats += WORKFORCE_COSTS.boat; }
