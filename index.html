@@ -79,6 +79,12 @@
         </div>
     </div>
 
+    <!-- Loading Screen -->
+    <div id="loading-overlay" class="overlay" style="z-index: 9998; flex-direction: column;">
+        <h2 style="color: #f1c40f; margin-bottom: 15px; font-size: 24px; text-shadow: 0 2px 4px rgba(0,0,0,0.8);">Entering Realm...</h2>
+        <p style="color: #a0aec0; font-size: 16px; font-weight: bold;">Syncing with Royal Archives</p>
+    </div>
+
     <!-- Alert Modals -->
     <div id="quest-alert-modal" class="overlay" style="z-index: 9005;">
         <div class="modal-box">
@@ -543,6 +549,7 @@
                 currentUser = input;
                 document.getElementById('ui-username').innerText = currentUser;
                 closeModal('login-overlay');
+                openModal('loading-overlay'); // Show loading screen
                 
                 selectedTile = null; lastAnchorTile = null; activeQbType = null; harvestData = {};
                 questCapitalTaps = 0; currentZoom = 1.0; 
@@ -688,6 +695,7 @@
                     centerViewport();
                     renderMap();
                     updateResourceUI();
+                    closeModal('loading-overlay');
                 }, 150);
                 
                 if(questTier < QUESTS.length) {
@@ -1631,17 +1639,9 @@
                 let isQuarry = state.includes(':Quarry') && effTerr !== 'FL';
                 let isCapital = (effTerr === 'C');
                 let isTown = (effTerr === 'T' && networkGrid[rIdx][cIdx]);
-                let isFish = (rawTerr === 'WBF' && state.startsWith('U') && !state.includes(':Looted'));
                 
-                if (state.startsWith('U') && (isMill || isQuarry || isCapital || isTown || isFish)) {
-                    if (networkGrid[rIdx][cIdx] || isFish || isCapital) {
-                        if (isFish) {
-                            resources.fish += 1;
-                            spawnFloatingText("+1 Fish", e.clientX, e.clientY, '#3182ce');
-                            pushTileUpdate(row, col, getBaseStateString(stateGrid[rIdx][cIdx]) + ':Looted'); 
-                            updateResourceUI();
-                            return;
-                        }
+                if (state.startsWith('U') && (isMill || isQuarry || isCapital || isTown)) {
+                    if (networkGrid[rIdx][cIdx] || isCapital) {
                         
                         let key = `${row}-${col}`;
                         if (!harvestData[key]) harvestData[key] = { clicks: 0, lastClick: 0 };
@@ -1743,6 +1743,69 @@
             }
         });
 
+        function checkBoatPlacement(targetR, targetC) {
+            let queue = [{r: targetR, c: targetC, dist: 0}];
+            let visited = new Set([`${targetR},${targetC}`]);
+            let foundShipyards = [];
+            
+            // 1. Scan for connected Shipyards over water within 10 tiles
+            while (queue.length > 0) {
+                let curr = queue.shift();
+                if (stateGrid[curr.r][curr.c] && stateGrid[curr.r][curr.c].includes(':Shipyard')) {
+                    foundShipyards.push(curr);
+                }
+                if (curr.dist >= 10) continue;
+                
+                const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+                for (let d of dirs) {
+                    let nr = curr.r + d[0]; let nc = curr.c + d[1];
+                    if (nr>=0 && nr<GRID_UNITS && nc>=0 && nc<GRID_UNITS) {
+                        if (!visited.has(`${nr},${nc}`)) {
+                            let nTerr = getEffectiveTerrain(mapGrid[nr][nc], stateGrid[nr][nc], nr, nc);
+                            if (isWaterType(nTerr) || (stateGrid[nr][nc] && stateGrid[nr][nc].includes(':Shipyard')) || (stateGrid[nr][nc] && stateGrid[nr][nc].includes(':Lane'))) {
+                                visited.add(`${nr},${nc}`);
+                                queue.push({r: nr, c: nc, dist: curr.dist + 1});
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (foundShipyards.length === 0) return { allowed: false, reason: "Must be in water within 10 connected tiles of a Shipyard." };
+            
+            // 2. Count all Shipyards and assign existing boats to their closest Shipyards globally
+            let allShipyards = [];
+            for (let r=0; r<GRID_UNITS; r++) {
+                for (let c=0; c<GRID_UNITS; c++) {
+                    if (stateGrid[r][c] && stateGrid[r][c].includes(':Shipyard')) allShipyards.push({r, c, used: 0});
+                }
+            }
+            
+            let boats = [];
+            for (let r=0; r<GRID_UNITS; r++) {
+                for (let c=0; c<GRID_UNITS; c++) {
+                    if (stateGrid[r][c] && stateGrid[r][c].includes(':Boat') && !(r===targetR && c===targetC)) boats.push({r, c});
+                }
+            }
+            
+            for (let b of boats) {
+                let bestSy = null; let bestDist = Infinity;
+                for (let sy of allShipyards) {
+                    let dist = Math.max(Math.abs(b.r - sy.r), Math.abs(b.c - sy.c));
+                    if (dist <= 10 && sy.used < 2 && dist < bestDist) { bestDist = dist; bestSy = sy; }
+                }
+                if (bestSy) bestSy.used++;
+            }
+            
+            // 3. See if any of the Shipyards attached to THIS body of water still have room
+            for (let fs of foundShipyards) {
+                let syMatch = allShipyards.find(s => s.r === fs.r && s.c === fs.c);
+                if (syMatch && syMatch.used < 2) return { allowed: true };
+            }
+            
+            return { allowed: false, reason: "Local Shipyards are at max capacity (2 Boats each)." };
+        }
+        
         function updateBottomPanel() {
             if (!selectedTile) return;
             const rIdx = selectedTile.row - 1; const cIdx = selectedTile.col - 1;
@@ -1842,6 +1905,12 @@
                     btn.onclick = () => { openInnModal(selectedTile.row, selectedTile.col); };
                     actionsContainer.appendChild(btn);
                 }
+                if (rawTerr === 'WBF' && !state.includes(':Looted')) {
+                    let btn = document.createElement('button'); btn.style.backgroundColor = '#3182ce'; 
+                    btn.innerText = `Harvest Big Fish (1 🐟)`;
+                    btn.onclick = () => { resources.fish += 1; updateResourceUI(); pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Looted'); };
+                    actionsContainer.appendChild(btn);
+                }
 
                 if (!builtString && terr !== 'C' && !state.includes(':Dam')) {
                     let canAttach = canAttachToNetwork(rIdx, cIdx);
@@ -1914,19 +1983,30 @@
                         }
                         createBuildBtn(actionsContainer, 'Establish Shipping Lane', 'gold', COSTS.lane, 'Lane', canAttachLane, baseStateStr, 0, 0, 'Lane', null, 2);
                         
+                        let boatCheck = checkBoatPlacement(rIdx, cIdx);
+                        
                         if ((resources.storedBoats || 0) > 0 && !state.includes(':Boat')) {
                             let btn = document.createElement('button');
                             btn.style.backgroundColor = '#3182ce';
                             btn.innerHTML = `Deploy Stored Boat (1 ⛵) | <span class="${workforce.used + WORKFORCE_COSTS.Boat > workforce.max ? 'req-missing' : ''}">-${WORKFORCE_COSTS.Boat} WF</span>`;
-                            btn.disabled = workforce.used + WORKFORCE_COSTS.Boat > workforce.max;
+                            
+                            // Apply strict validations to deploying stored boats
+                            if (workforce.used + WORKFORCE_COSTS.Boat > workforce.max) {
+                                btn.disabled = true; btn.title = "Insufficient Workforce capacity.";
+                            } else if (!boatCheck.allowed) {
+                                btn.disabled = true; btn.title = boatCheck.reason;
+                            } else {
+                                btn.disabled = false;
+                            }
+                            
                             btn.onclick = () => {
                                 resources.storedBoats--;
                                 pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Boat', 'Boat');
                             };
                             actionsContainer.appendChild(btn);
                         } else if (!state.includes(':Boat')) {
-                            let globalBoatCap = (tracker.built['Shipyard'] || 0) * 2;
-                            createBuildBtn(actionsContainer, 'Build Fishing Boat', 'wood', COSTS.boat, 'Boat', true, baseStateStr, WORKFORCE_COSTS.Boat, 0, null, ((tracker.built['Boat'] || 0) >= globalBoatCap) ? "Requires more Shipyards." : null, 2);
+                            // Apply strict validations to building new boats
+                            createBuildBtn(actionsContainer, 'Build Fishing Boat', 'wood', COSTS.boat, 'Boat', true, baseStateStr, WORKFORCE_COSTS.Boat, 0, null, !boatCheck.allowed ? boatCheck.reason : null, 2);
                         }
                     }
                     
