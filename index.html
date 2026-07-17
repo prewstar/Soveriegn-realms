@@ -1867,11 +1867,6 @@
                     
                     if (rawTerr === 'DR' && !state.includes(':Dam')) {
                         createBuildBtn(actionsContainer, 'Build Dam', 'wood', 50, 'Dam', canAttach, baseStateStr, 0, 0, null, null, 2);
-                    } else if (rawTerr === 'DR' && state.includes(':Dam')) {
-                        let btn = document.createElement('button'); btn.style.backgroundColor = '#9b2c2c'; 
-                        btn.innerText = "Demolish Dam";
-                        btn.onclick = () => pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr.replace(/:Dam/g, ''));
-                        actionsContainer.appendChild(btn);
                     }
 
                     if (isRiverType(terr) && !state.includes(':Dam')) {
@@ -1923,12 +1918,39 @@
                         pushTileUpdate(selectedTile.row, selectedTile.col, state.replace(/:Boat/g, ''));
                     };
                     actionsContainer.appendChild(btn);
-                } else if (builtString && !state.includes(':Dam')) {
-                    let btn = document.createElement('button');
-                    btn.className = 'danger-btn modal-btn'; btn.innerText = "Demolish Structures";
-                    btn.onclick = () => pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr);
-                    actionsContainer.appendChild(btn);
                 }
+                
+                // NEW Dynamic Targeted Demolition
+                const DEMOLISH_MAP = {
+                    'Road': { name: 'Access Road', refund: Math.floor(COSTS.road * 0.5), res: 'gold' },
+                    'Lane': { name: 'Shipping Lane', refund: Math.floor(COSTS.lane * 0.5), res: 'gold' },
+                    'House': { name: 'Tenement House', refund: Math.floor(COSTS.house * 0.5), res: 'wood' },
+                    'LumberMill': { name: 'Lumber Mill', refund: Math.floor(COSTS.lumbermill * 0.5), res: 'wood' },
+                    'Quarry': { name: 'Stone Quarry', refund: Math.floor(COSTS.quarry * 0.5), res: 'stone' },
+                    'Mine': { name: 'Gold Mine', refund: Math.floor(COSTS.goldmine * 0.5), res: 'wood' },
+                    'Shipyard': { name: 'Shipyard', refund: Math.floor(COSTS.shipyard * 0.5), res: 'wood' },
+                    'Farm': { name: 'Wheat Farm', refund: Math.floor(COSTS.farm * 0.5), res: 'wood' },
+                    'Dam': { name: 'River Dam', refund: 25, res: 'wood' }
+                };
+
+                let currentTags = state.split(':');
+                currentTags.forEach(tag => {
+                    if (DEMOLISH_MAP[tag]) {
+                        let info = DEMOLISH_MAP[tag];
+                        let btn = document.createElement('button');
+                        btn.className = 'danger-btn modal-btn';
+                        btn.style.marginTop = '4px';
+                        btn.innerText = `Demolish ${info.name} (+${info.refund} ${info.res === 'gold' ? 'Gold' : info.res === 'wood' ? 'Wood' : 'Stone'})`;
+                        btn.onclick = () => {
+                            resources[info.res] += info.refund;
+                            // Removes only this specific building from the tile string
+                            let newState = state.replace(':' + tag, '');
+                            pushTileUpdate(selectedTile.row, selectedTile.col, newState);
+                            updateResourceUI();
+                        };
+                        actionsContainer.appendChild(btn);
+                    }
+                });
             }
         }
 
