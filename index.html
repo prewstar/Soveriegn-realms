@@ -1565,6 +1565,13 @@
                         let ptSt = stateGrid[pt.r][pt.c];
                         let ptTerr = getEffectiveTerrain(mapGrid[pt.r][pt.c], ptSt, pt.r, pt.c);
                         
+                        if (actionKey === 'DemolishRoad') {
+                            // Only valid if there is actually a road to demolish
+                            if (!ptSt.includes(':Road')) { valid = false; break; }
+                            toBuild.push(pt);
+                            continue;
+                        }
+                        
                         if (ptSt.includes(`:${actionKey}`)) continue; 
                         if (!ptSt.startsWith('U')) { valid = false; break; }
                         
@@ -1582,6 +1589,19 @@
                     }
                     
                     if (valid && toBuild.length > 0) {
+                        if (actionKey === 'DemolishRoad') {
+                            // Give refunds instead of charging
+                            let totalRefund = toBuild.length * Math.floor(COSTS.road * 0.5);
+                            resources.gold += totalRefund;
+                            spawnFloatingText(`+${totalRefund} Gold`, e.clientX, e.clientY, '#f6e05e');
+                            toBuild.forEach(pt => {
+                                let ptSt = stateGrid[pt.r][pt.c];
+                                pushTileUpdate(pt.r + 1, pt.c + 1, ptSt.replace(':Road', ''), 'DemolishRoad');
+                            });
+                            lastAnchorTile = { r: rIdx, c: cIdx, type: actionKey }; 
+                            return;
+                        }
+
                         let unitCost = (actionKey === 'Road') ? COSTS.road : (actionKey === 'Lane') ? COSTS.lane : COSTS.terraform;
                         let totalCost = toBuild.length * unitCost;
                         
@@ -1820,7 +1840,7 @@
                     actionsContainer.appendChild(btn);
                 }
 
-                if (!builtString && terr !== 'C') {
+                if (!builtString && terr !== 'C' && !state.includes(':Dam')) {
                     let canAttach = canAttachToNetwork(rIdx, cIdx);
                     let canAttachLane = hasLaneAdjacency(rIdx, cIdx);
                     
@@ -1898,7 +1918,7 @@
                                 pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Boat', 'Boat');
                             };
                             actionsContainer.appendChild(btn);
-                        } else {
+                        } else if (!state.includes(':Boat')) {
                             let globalBoatCap = (tracker.built['Shipyard'] || 0) * 2;
                             createBuildBtn(actionsContainer, 'Build Fishing Boat', 'wood', COSTS.boat, 'Boat', true, baseStateStr, WORKFORCE_COSTS.Boat, 0, null, ((tracker.built['Boat'] || 0) >= globalBoatCap) ? "Requires more Shipyards." : null, 2);
                         }
@@ -1948,9 +1968,10 @@
                         btn.innerText = `Demolish ${info.name} (+${info.refund} ${info.res === 'gold' ? 'Gold' : info.res === 'wood' ? 'Wood' : 'Stone'})`;
                         btn.onclick = () => {
                             resources[info.res] += info.refund;
-                            // Removes only this specific building from the tile string
                             let newState = state.replace(':' + tag, '');
-                            pushTileUpdate(selectedTile.row, selectedTile.col, newState);
+                            // If it's a road, activate the Quick 'DemolishRoad' action
+                            let quickAction = tag === 'Road' ? 'DemolishRoad' : null;
+                            pushTileUpdate(selectedTile.row, selectedTile.col, newState, quickAction);
                             updateResourceUI();
                         };
                         actionsContainer.appendChild(btn);
