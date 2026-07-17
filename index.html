@@ -1620,7 +1620,8 @@
                             spawnFloatingText("Not enough gold!", e.clientX, e.clientY, '#fc8181');
                             return;
                         }
-                    } else if (path.length > 1) {
+                    // FIX: Only show Path Blocked if the path is actually invalid
+                    } else if (!valid && path.length > 1) {
                         spawnFloatingText("Path blocked!", e.clientX, e.clientY, '#fc8181');
                         return;
                     }
