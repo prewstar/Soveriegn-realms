@@ -1566,9 +1566,11 @@
                         let ptTerr = getEffectiveTerrain(mapGrid[pt.r][pt.c], ptSt, pt.r, pt.c);
                         
                         if (actionKey === 'DemolishRoad') {
-                            // Only valid if there is actually a road to demolish
-                            if (!ptSt.includes(':Road')) { valid = false; break; }
-                            toBuild.push(pt);
+                            // FIX: Don't invalidate the path if a tile is missing a road (like the anchor tile you just demolished). 
+                            // Just skip the empty tiles and queue the ones that actually have roads.
+                            if (ptSt.includes(':Road')) { 
+                                toBuild.push(pt); 
+                            }
                             continue;
                         }
                         
@@ -1905,7 +1907,10 @@
 
                     if (isWaterType(terr) && !isRiverType(terr)) {
                         let coastal = isCoastal(rIdx, cIdx);
-                        createBuildBtn(actionsContainer, 'Build Shipyard', 'wood', COSTS.shipyard, 'Shipyard', canAttach && coastal, baseStateStr, WORKFORCE_COSTS.Shipyard, 0, null, !coastal ? "Shipyards must touch the coast." : null, 2);
+                        // Only render the Shipyard button if it is a coastal tile
+                        if (coastal) {
+                            createBuildBtn(actionsContainer, 'Build Shipyard', 'wood', COSTS.shipyard, 'Shipyard', canAttach, baseStateStr, WORKFORCE_COSTS.Shipyard, 0, null, null, 2);
+                        }
                         createBuildBtn(actionsContainer, 'Establish Shipping Lane', 'gold', COSTS.lane, 'Lane', canAttachLane, baseStateStr, 0, 0, 'Lane', null, 2);
                         
                         if ((resources.storedBoats || 0) > 0 && !state.includes(':Boat')) {
