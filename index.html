@@ -91,7 +91,7 @@
 
     <div id="dialogue-modal" class="overlay" style="z-index: 9002;">
         <div class="modal-box">
-            <h2>Alert</h2>
+            <h2 id="dm-title">Alert</h2>
             <p class="narrative" id="dm-text"></p>
             <button class="modal-btn" id="dm-confirm">Yes</button>
             <button class="modal-btn close-btn" id="dm-cancel" onclick="closeModal('dialogue-modal')">No</button>
@@ -1567,8 +1567,6 @@
                             if (capitalTier < 1 || ['M','H','W','DW','WF','WBF','WA','FL','L','T','C','BA','FWD','MCR','PG','I'].includes(ptTerr) || (ptTerr && typeof ptTerr === 'string' && ptTerr.startsWith('WH')) || isWheatField(pt.r, pt.c) || isAlienSlime(mapGrid[pt.r][pt.c], ptSt) || (ptTerr === 'R' && !canBuildFord(pt.r, pt.c))) valid = false;
                         } else if (actionKey === 'Lane') {
                             if (capitalTier < 2 || (!['W','WF','WBF','DW','WA','FL','L'].includes(ptTerr))) valid = false;
-                        } else if (actionKey === 'Lane') {
-                            if (capitalTier < 2 || (!['W','WF','WBF','DW','WA','FL'].includes(ptTerr))) valid = false;
                         } else if (actionKey === 'Cleared') {
                             if (capitalTier < 3 || ptTerr !== 'F' || ptSt.includes(':Planted')) valid = false;
                         } else if (actionKey === 'Planted') {
