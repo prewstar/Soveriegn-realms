@@ -628,7 +628,7 @@
             breakdown.woodText = `INCOME (+${incomes.wood}/10s)\n\nLumber Mills: ${numMills}`;
             breakdown.stoneText = `INCOME (+${incomes.stone}/10s)\n\nQuarries: ${numQuarries}`;
             
-            breakdown.foodText = `PRODUCED (${food.max}):\nFarms: +${breakdown.foodFarms} (${numFarms} farms)\nFishing Boats: +${breakdown.foodBoats} (${numBoats} boats)\n\nCONSUMED (${food.used}):\nTowns/Capital: -${breakdown.foodTowns}\nHouses: -${breakdown.foodHouses} (${numHouses} houses)`;
+            breakdown.foodText = `PRODUCED (${food.max}):\nFarms: +${breakdown.foodFarms} (${numFarms} farms)\nFishing Boats: +${breakdown.foodBoats} (${numBoats} boats)\n\nCONSUMED (${food.used}):\nTowns/Capital: -${breakdown.foodTowns}\nHouses: -${breakdown.foodHouses} (${numHouses} houses)\nSlime Penalties: -${breakdown.foodSlimePenalty}`;
             breakdown.wfText = `MAX WORKFORCE (${workforce.max}):\nBase Pool: +${breakdown.wfBase}\nHouses: +${breakdown.wfHouses} (${numHouses} houses)\nGuilds: +${breakdown.wfGuilds}\nSlime Penalties: -${breakdown.wfSlimePenalty}\n\nUSED WORKFORCE (${workforce.used}):\nMills: -${breakdown.wfMills} (${numMills} mills)\nQuarries: -${breakdown.wfQuarries} (${numQuarries} quarries)\nMines: -${breakdown.wfMines} (${numMines} mines)\nFarms: -${breakdown.wfFarms} (${numFarms} farms)\nBoats: -${breakdown.wfBoats} (${numBoats} boats)\nShipyards: -${breakdown.wfShipyards} (${numShipyards} shipyards)`;
             
             updateQuestUI();
@@ -1257,7 +1257,7 @@
             breakdown = {
                 goldBase: 0, goldTowns: 0, goldMines: 0,
                 woodBase: 0, woodMills: 0, stoneQuarries: 0,
-                foodCap: 0, foodTowns: 0, foodHouses: 0, foodFarms: 0, foodBoats: 0,
+                foodCap: 0, foodTowns: 0, foodHouses: 0, foodFarms: 0, foodBoats: 0, foodSlimePenalty: 0,
                 wfBase: 10, wfHouses: 0, wfMills: 0, wfQuarries: 0, wfMines: 0, wfFarms: 0, wfBoats: 0, wfShipyards: 0, wfGuilds: 0, wfSlimePenalty: 0
             };
             
@@ -1281,7 +1281,7 @@
                         if (rawTerr === 'T') discoveredTownsCount++;
                         
                         if (['AM', 'AP', 'AF'].includes(rawTerr) && !st.includes(':ClearedSlime')) {
-                            food.max -= 10; breakdown.foodTowns += 10; 
+                            food.max -= 10; breakdown.foodSlimePenalty += 10;
                             workforce.max -= 10; breakdown.wfSlimePenalty += 10;
                         }
                         
@@ -1830,6 +1830,20 @@
                             btn.disabled = resources.gold < cost; 
                             btn.onclick = () => { resources.gold -= cost; pushTileUpdate(selectedTile.row, selectedTile.col, state.replace(/:Planted/g, '').replace(/:Cleared/g, '') + ':Cleared', 'Cleared'); };
                         }
+                        actionsContainer.appendChild(btn);
+                    }
+
+                    if (isAlienSlime(rawTerr, state)) {
+                        let cost = 150; 
+                        let btn = document.createElement('button'); 
+                        btn.style.backgroundColor = '#805ad5';
+                        let costCls = resources.gold < cost ? 'req-missing' : '';
+                        btn.innerHTML = `Purge Alien Slime (<span class="${costCls}">${cost} Gold</span>)`;
+                        btn.disabled = resources.gold < cost; 
+                        btn.onclick = () => { 
+                            resources.gold -= cost; 
+                        pushTileUpdate(selectedTile.row, selectedTile.col, state + ':ClearedSlime', 'ClearedSlime'); 
+                        };
                         actionsContainer.appendChild(btn);
                     }
                     
