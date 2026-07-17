@@ -628,8 +628,12 @@
             breakdown.woodText = `INCOME (+${incomes.wood}/10s)\n\nLumber Mills: ${numMills}`;
             breakdown.stoneText = `INCOME (+${incomes.stone}/10s)\n\nQuarries: ${numQuarries}`;
             
-            breakdown.foodText = `PRODUCED (${food.max}):\nFarms: +${breakdown.foodFarms} (${numFarms} farms)\nFishing Boats: +${breakdown.foodBoats} (${numBoats} boats)\n\nCONSUMED (${food.used}):\nTowns/Capital: -${breakdown.foodTowns}\nHouses: -${breakdown.foodHouses} (${numHouses} houses)\nSlime Penalties: -${breakdown.foodSlimePenalty}`;
-            breakdown.wfText = `MAX WORKFORCE (${workforce.max}):\nBase Pool: +${breakdown.wfBase}\nHouses: +${breakdown.wfHouses} (${numHouses} houses)\nGuilds: +${breakdown.wfGuilds}\nSlime Penalties: -${breakdown.wfSlimePenalty}\n\nUSED WORKFORCE (${workforce.used}):\nMills: -${breakdown.wfMills} (${numMills} mills)\nQuarries: -${breakdown.wfQuarries} (${numQuarries} quarries)\nMines: -${breakdown.wfMines} (${numMines} mines)\nFarms: -${breakdown.wfFarms} (${numFarms} farms)\nBoats: -${breakdown.wfBoats} (${numBoats} boats)\nShipyards: -${breakdown.wfShipyards} (${numShipyards} shipyards)`;
+            let slimeFoodStr = breakdown.foodSlimePenalty > 0 ? `\nSlime Penalties: -${breakdown.foodSlimePenalty}` : '';
+            breakdown.foodText = `PRODUCED (${food.max}):\nFarms: +${breakdown.foodFarms} (${numFarms} farms)\nFishing Boats: +${breakdown.foodBoats} (${numBoats} boats)\n\nCONSUMED (${food.used}):\nTowns/Capital: -${breakdown.foodTowns}\nHouses: -${breakdown.foodHouses} (${numHouses} houses)${slimeFoodStr}`;
+
+            let guildStr = breakdown.wfGuilds > 0 ? `\nGuilds: +${breakdown.wfGuilds}` : '';
+            let slimeWfStr = breakdown.wfSlimePenalty > 0 ? `\nSlime Penalties: -${breakdown.wfSlimePenalty}` : '';
+            breakdown.wfText = `MAX WORKFORCE (${workforce.max}):\nBase Pool: +${breakdown.wfBase}\nHouses: +${breakdown.wfHouses} (${numHouses} houses)${guildStr}${slimeWfStr}\n\nUSED WORKFORCE (${workforce.used}):\nMills: -${breakdown.wfMills} (${numMills} mills)\nQuarries: -${breakdown.wfQuarries} (${numQuarries} quarries)\nMines: -${breakdown.wfMines} (${numMines} mines)\nFarms: -${breakdown.wfFarms} (${numFarms} farms)\nBoats: -${breakdown.wfBoats} (${numBoats} boats)\nShipyards: -${breakdown.wfShipyards} (${numShipyards} shipyards)`;
             
             updateQuestUI();
         }
@@ -1285,9 +1289,10 @@
                             workforce.max -= 10; breakdown.wfSlimePenalty += 10;
                         }
                         
+                        if (terr === 'PG') { workforce.max += 10; breakdown.wfGuilds += 10; }
+
                         if (networkGrid[r][c]) {
                             if (terr === 'T') connectedTownsCount++;
-                            if (terr === 'PG') { workforce.max += 10; breakdown.wfGuilds += 10; }
                             if (terr === 'C' || terr === 'T') { food.used += 5; breakdown.foodTowns += 5; }
                             
                             let tags = st.split(':');
@@ -1883,7 +1888,7 @@
                         createBuildBtn(actionsContainer, 'Build Shipyard', 'wood', COSTS.shipyard, 'Shipyard', canAttach && coastal, baseStateStr, WORKFORCE_COSTS.Shipyard, 0, null, !coastal ? "Shipyards must touch the coast." : null, 2);
                         createBuildBtn(actionsContainer, 'Establish Shipping Lane', 'gold', COSTS.lane, 'Lane', canAttachLane, baseStateStr, 0, 0, 'Lane', null, 2);
                         
-                        if ((resources.storedBoats || 0) > 0) {
+                        if ((resources.storedBoats || 0) > 0 && !state.includes(':Boat')) {
                             let btn = document.createElement('button');
                             btn.style.backgroundColor = '#3182ce';
                             btn.innerHTML = `Deploy Stored Boat (1 ⛵) | <span class="${workforce.used + WORKFORCE_COSTS.Boat > workforce.max ? 'req-missing' : ''}">-${WORKFORCE_COSTS.Boat} WF</span>`;
