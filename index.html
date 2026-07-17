@@ -56,6 +56,7 @@
         .tile-details p { margin: 4px 0; font-size: 14px; }
         .tile-details span { font-weight: bold; color: #fff; }
         .income-highlight { color: #48bb78 !important; font-weight: bold; }
+        .disconnect-warning { color: #fc8181; font-weight: bold; font-size: 13px; margin-top: 4px; border-top: 1px dashed #fc8181; padding-top: 4px; }
         
         .actions-list { display: flex; flex-direction: column; gap: 8px; max-height: 110px; overflow-y: auto; padding-right: 5px; }
         .actions-list::-webkit-scrollbar { width: 6px; }
@@ -90,7 +91,7 @@
 
     <div id="dialogue-modal" class="overlay" style="z-index: 9002;">
         <div class="modal-box">
-            <h2 id="dm-title">Alert</h2>
+            <h2>Alert</h2>
             <p class="narrative" id="dm-text"></p>
             <button class="modal-btn" id="dm-confirm">Yes</button>
             <button class="modal-btn close-btn" id="dm-cancel" onclick="closeModal('dialogue-modal')">No</button>
@@ -113,7 +114,6 @@
         </div>
     </div>
     
-    <!-- New Hero Roster Modal -->
     <div id="roster-modal" class="overlay" onclick="closeModal('roster-modal')" style="z-index: 9001;">
         <div class="modal-box" onclick="event.stopPropagation()">
             <h2>🦸‍♂️ Your Retinue</h2>
@@ -121,8 +121,16 @@
             <button class="modal-btn close-btn" onclick="closeModal('roster-modal')" style="margin-top: 15px;">Close</button>
         </div>
     </div>
+
+    <!-- NEW INVENTORY MODAL -->
+    <div id="inventory-modal" class="overlay" onclick="closeModal('inventory-modal')" style="z-index: 9001;">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h2>🎒 Inventory</h2>
+            <div id="inventory-content" style="text-align:left;"></div>
+            <button class="modal-btn close-btn" onclick="closeModal('inventory-modal')" style="margin-top: 15px;">Close</button>
+        </div>
+    </div>
     
-    <!-- New Inn Drafting Modal -->
     <div id="inn-modal" class="overlay" style="z-index: 9003;">
         <div class="modal-box">
             <h2>🍻 Wayside Inn</h2>
@@ -154,9 +162,6 @@
             <div class="res-item" onclick="showInfoModal('🪨 Stone', breakdown.stoneText)">
                 🪨 <span id="stone-val">10</span><span id="stone-cap" class="limit">/200</span>
             </div>
-            <div class="res-item" style="border-color: #3182ce;" onclick="showInfoModal('🐟 Fish', 'Freshly caught fish! Use them to stock flooded plains for a permanent food boost.')">
-                🐟 <span id="fish-val">0</span>
-            </div>
             <div class="res-item" style="border-color: #48bb78;" onclick="showInfoModal('🍖 Food', breakdown.foodText)">
                 🍖 <span id="food-val" style="color:#68d391;">0/0</span>
             </div>
@@ -178,6 +183,7 @@
             <div class="fab" id="fab-quest" onclick="openModal('quest-modal'); updateQuestUI();">📖</div>
             <div class="mini-counter" id="quest-mini-counter">0/0</div>
             <div class="fab" onclick="openModal('roster-modal'); updateRosterUI();">🦸‍♂️</div>
+            <div class="fab" onclick="openModal('inventory-modal'); updateInventoryUI();">🎒</div>
             <div class="fab" onclick="openModal('settings-modal')">⚙️</div>
         </div>
 
@@ -189,7 +195,7 @@
             <button id="quick-build-offer" onclick="toggleQuickBuildState()">⚡ Enable Quick Build</button>
             
             <div class="bp-header">
-                <h3>Tile Inspector</h3>
+                <h3 id="inspector-title">Tile Inspector</h3>
                 <button class="close-bp" onclick="closeBottomPanel()">✖</button>
             </div>
             <div class="tile-details">
@@ -224,13 +230,18 @@
         
         let selectedTile = null;
         let capitalPos = { row: 50, col: 50 }; 
-        
-        let connectedTownsCount = 0, exploredCount = 0, discoveredTownsCount = 0;
-        let shipyardCount = 0, boatCount = 0;
-        let farmCount = 0, lumberMillCount = 0, quarryCount = 0, questCapitalTaps = 0, tenementHouseCount = 0; 
+        let connectedTownsCount = 0;
 
-        // New Resource added!
-        let resources = { gold: 0, wood: 60, stone: 10, fish: 0 };
+        let tracker = {
+            explored: 0,
+            terr: {},
+            built: {},
+            tags: {},
+            floodedRivers: Array(GRID_UNITS).fill(0).map(()=>Array(GRID_UNITS).fill(false))
+        };
+
+        // Inventory and Storage Variables
+        let resources = { gold: 0, wood: 60, stone: 10, fish: 0, storedBoats: 0 };
         let incomes = { gold: 0, wood: 0, stone: 0 };
         
         let workforce = { used: 0, max: 10 };
@@ -238,6 +249,7 @@
         let globalStorageCap = 200, globalGoldCap = 1000;
         
         let capitalTier = 1, questTier = 0, freeHouses = 0;
+        let questCapitalTaps = 0;
         let breakdown = {};
         let harvestData = {}; 
         
@@ -254,19 +266,18 @@
         let lastTickTime = Date.now();
         let isDraggingMap = false; 
 
-        let clickStartX = 0;
-        let clickStartY = 0;
-        let isDown = false;
-        let startX, startY, scrollLeft, scrollTop;
+        let ptrStartX = 0;
+        let ptrStartY = 0;
+        let isPointerDown = false;
+        let panStartX = 0, panStartY = 0, scrollStartLeft = 0, scrollStartTop = 0;
 
         const COSTS = { 
             road: 15, lane: 20, house: 50, lumbermill: 40, 
             quarry: 30, goldmine: 100, shipyard: 80, farm: 30, boat: 25,
             expand: {g: 100, w: 50, s: 50}, terraform: 50
         };
-        const WORKFORCE_COSTS = { lumbermill: 2, quarry: 3, mine: 4, farm: 2, boat: 1, shipyard: 2, road: 0, lane: 0, house: 0 };
+        const WORKFORCE_COSTS = { LumberMill: 2, Quarry: 3, Mine: 4, Farm: 2, Boat: 1, Shipyard: 2, Road: 0, Lane: 0, House: 0, Dam: 0 };
 
-        // --- NEW HERO SYSTEM ---
         const TRAVELLERS = {
             'WM': { name: 'Woodsman', icon: '🪓', desc: 'All Lumber Mills produce +1 Wood.' },
             'SP': { name: 'Spy', icon: '🕵️', desc: 'Decreases cost of exploration by 20%.' },
@@ -290,45 +301,45 @@
                 narrative: "Excellent. Now, put that coin to good use. Your people are hungry!",
                 goal: "Build 2 Farms",
                 reward: "Next house bought is free",
-                isComplete: () => farmCount >= 2,
-                progress: () => `${Math.min(farmCount, 2)}/2 Farms`, 
-                shortProgress: () => `${Math.min(farmCount, 2)}/2`,
+                isComplete: () => (tracker.built['Farm'] || 0) >= 2,
+                progress: () => `${Math.min(tracker.built['Farm'] || 0, 2)}/2 Farms`, 
+                shortProgress: () => `${Math.min(tracker.built['Farm'] || 0, 2)}/2`,
                 claim: () => updateCapitalData(2, 1) 
             },
             {
                 narrative: "Time to explore your new kingdom, how far will your lands grow?",
                 goal: "Have 50 new tiles discovered", 
                 reward: "50 Wood",
-                isComplete: () => exploredCount >= 75, 
-                progress: () => `${Math.min(Math.max(0, exploredCount - 25), 50)}/50 New Tiles`, 
-                shortProgress: () => `${Math.min(Math.max(0, exploredCount - 25), 50)}/50`,
+                isComplete: () => tracker.explored >= 75, 
+                progress: () => `${Math.min(Math.max(0, tracker.explored - 25), 50)}/50 New Tiles`, 
+                shortProgress: () => `${Math.min(Math.max(0, tracker.explored - 25), 50)}/50`,
                 claim: () => { resources.wood += 50; updateCapitalData(3, 0); }
             },
             {
                 narrative: "Your kingdom is growing, we will need resources to keep expanding.",
                 goal: "Build a Lumber Mill",
                 reward: "50 Wood",
-                isComplete: () => lumberMillCount >= 1,
-                progress: () => `${Math.min(lumberMillCount, 1)}/1 Lumber Mill`, 
-                shortProgress: () => `${Math.min(lumberMillCount, 1)}/1`,
+                isComplete: () => (tracker.built['LumberMill'] || 0) >= 1,
+                progress: () => `${Math.min(tracker.built['LumberMill'] || 0, 1)}/1 Lumber Mill`, 
+                shortProgress: () => `${Math.min(tracker.built['LumberMill'] || 0, 1)}/1`,
                 claim: () => { resources.wood += 50; updateCapitalData(4, 0); }
             },
             {
                 narrative: "You will need more workers to send to the mines and mills. We can build houses in towns to grow our population.",
                 goal: "Build two tenement houses",
                 reward: "60 Stone",
-                isComplete: () => tenementHouseCount >= 2,
-                progress: () => `${Math.min(tenementHouseCount, 2)}/2 Houses`, 
-                shortProgress: () => `${Math.min(tenementHouseCount, 2)}/2`,
+                isComplete: () => (tracker.built['House'] || 0) >= 2,
+                progress: () => `${Math.min(tracker.built['House'] || 0, 2)}/2 Houses`, 
+                shortProgress: () => `${Math.min(tracker.built['House'] || 0, 2)}/2`,
                 claim: () => { resources.stone += 60; updateCapitalData(5, 0); }
             },
             {
                 narrative: "Head to the mountains, there are resources to plunder there too.",
                 goal: "Build a Stone Quarry",
                 reward: "100 Wood + 100 Stone",
-                isComplete: () => quarryCount >= 1,
-                progress: () => `${Math.min(quarryCount, 1)}/1 Stone Quarry`, 
-                shortProgress: () => `${Math.min(quarryCount, 1)}/1`,
+                isComplete: () => (tracker.built['Quarry'] || 0) >= 1,
+                progress: () => `${Math.min(tracker.built['Quarry'] || 0, 1)}/1 Stone Quarry`, 
+                shortProgress: () => `${Math.min(tracker.built['Quarry'] || 0, 1)}/1`,
                 claim: () => { 
                     resources.wood += 100; resources.stone += 100; 
                     updateCapitalData(6, 0); 
@@ -346,7 +357,7 @@
             'F': { color: '#2f855a', text: '🌲', label: 'Forest' },
             'M': { color: '#718096', text: '⛰️', label: 'Mountain' },
             'H': { color: '#8d99ae', text: '⛰️', label: 'Hills' },
-            'W': { color: '#3182ce', text: '🌊', label: 'Water Body' },
+            'W': { color: '#3182ce', text: '🌊', label: 'Sea' },
             'DW': { color: '#1e40af', text: '🌊', label: 'Deep Water' },
             'WF': { color: '#3182ce', text: '🐟', label: 'Fish Shoal' },
             'WBF': { color: '#3182ce', text: '🐋', label: 'Big Fish Shoal' },
@@ -354,7 +365,9 @@
             'R': { color: '#48bb78', text: '', label: 'River' },
             'DR': { color: '#38a169', text: '💧', label: 'Rushing River' },
             'RBD': { color: '#48bb78', text: '🪵', label: 'Beaver Dam' },
-            'FP': { color: '#8f9779', text: '🌾', label: 'Flood Plain' },
+            'FP': { color: '#50bb70', text: '', label: 'Flood Plain' },
+            'FL': { color: '#3182ce', text: '', label: 'Flooded Lake' }, 
+            'TOD': { color: '#3182ce', text: '⛲', label: 'River Source' },
             'C': { color: '#9f7aea', text: '🏰', label: 'Capital Center' },
             'T': { color: '#b794f4', text: '🏘️', label: 'Town' },
             'BA': { color: '#DBD370', text: '🍂', label: 'Build Area' },
@@ -366,7 +379,8 @@
             'I': { color: '#8b4513', text: '🍻', label: 'Wayside Inn' },
             'AM': { color: '#805ad5', text: '🦠', label: 'Alien Slime' },
             'AP': { color: '#805ad5', text: '🦠', label: 'Alien Slime' },
-            'AF': { color: '#805ad5', text: '🦠', label: 'Alien Slime' }
+            'AF': { color: '#805ad5', text: '🦠', label: 'Alien Slime' },
+            'L': { color: '#3182ce', text: '', label: 'Lake' }
         };
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -392,52 +406,48 @@
             setInterval(gameTick, 10000); 
             setInterval(autoSaveResources, 30000); 
             
-            // --- Custom Desktop Drag-to-Pan Logic ---
-            scrollContainer.addEventListener('mousedown', (e) => {
-                isDown = true;
+            scrollContainer.addEventListener('pointerdown', (e) => {
+                isPointerDown = true;
                 isDraggingMap = false; 
                 scrollContainer.style.cursor = 'grabbing';
-                startX = e.pageX - scrollContainer.offsetLeft;
-                startY = e.pageY - scrollContainer.offsetTop;
-                scrollLeft = scrollContainer.scrollLeft;
-                scrollTop = scrollContainer.scrollTop;
+                ptrStartX = e.clientX;
+                ptrStartY = e.clientY;
+                panStartX = e.pageX - scrollContainer.offsetLeft;
+                panStartY = e.pageY - scrollContainer.offsetTop;
+                scrollStartLeft = scrollContainer.scrollLeft;
+                scrollStartTop = scrollContainer.scrollTop;
+            });
+            
+            scrollContainer.addEventListener('pointermove', (e) => {
+                if (!isPointerDown) return;
                 
-                clickStartX = e.clientX;
-                clickStartY = e.clientY;
-            });
-            scrollContainer.addEventListener('mouseleave', () => { 
-                isDown = false; 
-                scrollContainer.style.cursor = 'grab'; 
-            });
-            scrollContainer.addEventListener('mouseup', () => { 
-                isDown = false; 
-                scrollContainer.style.cursor = 'grab'; 
-                setTimeout(() => { isDraggingMap = false; }, 50); 
-            });
-            scrollContainer.addEventListener('mousemove', (e) => {
-                if (!isDown) return;
-                const x = e.pageX - scrollContainer.offsetLeft;
-                const y = e.pageY - scrollContainer.offsetTop;
-                
-                if (Math.abs(e.clientX - clickStartX) > 5 || Math.abs(e.clientY - clickStartY) > 5) {
+                if (Math.abs(e.clientX - ptrStartX) > 8 || Math.abs(e.clientY - ptrStartY) > 8) {
                     isDraggingMap = true;
                 }
                 
                 if (isDraggingMap) {
-                    const walkX = (x - startX) * 1.5; 
-                    const walkY = (y - startY) * 1.5;
-                    scrollContainer.scrollLeft = scrollLeft - walkX;
-                    scrollContainer.scrollTop = scrollTop - walkY;
+                    const x = e.pageX - scrollContainer.offsetLeft;
+                    const y = e.pageY - scrollContainer.offsetTop;
+                    const walkX = (x - panStartX) * 1.5; 
+                    const walkY = (y - panStartY) * 1.5;
+                    scrollContainer.scrollLeft = scrollStartLeft - walkX;
+                    scrollContainer.scrollTop = scrollStartTop - walkY;
                 }
             });
 
-            // Touch mapping
+            const releasePointer = () => { 
+                isPointerDown = false; 
+                scrollContainer.style.cursor = 'grab'; 
+                setTimeout(() => { isDraggingMap = false; }, 50); 
+            };
+            
+            scrollContainer.addEventListener('pointerup', releasePointer);
+            scrollContainer.addEventListener('pointercancel', releasePointer);
+            scrollContainer.addEventListener('pointerleave', releasePointer);
+
             scrollContainer.addEventListener('touchstart', (e) => {
                 if (e.touches.length === 2) {
                     initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-                } else if (e.touches.length === 1) {
-                    clickStartX = e.touches[0].clientX;
-                    clickStartY = e.touches[0].clientY;
                 }
             });
 
@@ -467,7 +477,6 @@
             requestAnimationFrame(updateTimerVisual);
         }
 
-        // UI Logic
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         
@@ -489,7 +498,6 @@
             openModal('dialogue-modal');
         }
 
-        // --- Context Quick Build System ---
         function showQuickBuildOffer(type) {
             if (activeQbType !== type) { quickBuildActive = false; }
             activeQbType = type;
@@ -539,7 +547,7 @@
                 selectedTile = null; lastAnchorTile = null; activeQbType = null; harvestData = {};
                 questCapitalTaps = 0; currentZoom = 1.0; 
                 canvas.style.width = '4000px'; canvas.style.height = '4000px';
-                resources = { gold: 0, wood: 60, stone: 10, fish: 0 };
+                resources = { gold: 0, wood: 60, stone: 10, fish: 0, storedBoats: 0 };
                 hiredTravellers = [];
                 lastTickTime = Date.now();
                 
@@ -562,11 +570,10 @@
             if(!stateGrid[r-1]) return; 
             let st = stateGrid[r-1][c-1] || "";
             
-            // Replaces old Bank/Trv data entirely
-            st = st.replace(/:BankG\d+W\d+S\d+(?:F\d+)?/g, '');
+            st = st.replace(/:BankG\d+W\d+S\d+(?:F\d+)?(?:B\d+)?/g, '');
             st = st.replace(/:Trv[A-Z\-]+/g, '');
             
-            st += `:BankG${Math.floor(resources.gold)}W${Math.floor(resources.wood)}S${Math.floor(resources.stone)}F${Math.floor(resources.fish)}`;
+            st += `:BankG${Math.floor(resources.gold)}W${Math.floor(resources.wood)}S${Math.floor(resources.stone)}F${Math.floor(resources.fish)}B${Math.floor(resources.storedBoats || 0)}`;
             if (hiredTravellers.length > 0) st += `:Trv${hiredTravellers.join('-')}`;
             
             stateGrid[r-1][c-1] = st;
@@ -601,7 +608,6 @@
             document.getElementById('gold-val').innerText = Math.floor(resources.gold);
             document.getElementById('wood-val').innerText = Math.floor(resources.wood);
             document.getElementById('stone-val').innerText = Math.floor(resources.stone);
-            document.getElementById('fish-val').innerText = Math.floor(resources.fish);
             
             document.getElementById('gold-cap').innerText = `/${globalGoldCap}`;
             document.getElementById('wood-cap').innerText = `/${globalStorageCap}`;
@@ -610,12 +616,20 @@
             document.getElementById('food-val').innerText = `${food.used}/${food.max}`;
             document.getElementById('workforce-val').innerText = `${workforce.used}/${workforce.max}`;
             
+            let numFarms = tracker.built['Farm'] || 0;
+            let numBoats = tracker.built['Boat'] || 0;
+            let numHouses = tracker.built['House'] || 0;
+            let numMills = tracker.built['LumberMill'] || 0;
+            let numQuarries = tracker.built['Quarry'] || 0;
+            let numMines = tracker.built['Mine'] || 0;
+            let numShipyards = tracker.built['Shipyard'] || 0;
+
             breakdown.goldText = `INCOME (+${incomes.gold}/10s)\n\nExploration Base: +${breakdown.goldBase}\nConnected Towns: +${breakdown.goldTowns}\nActive Mines: +${breakdown.goldMines}`;
-            breakdown.woodText = `INCOME (+${incomes.wood}/10s)\n\nLumber Mills: ${lumberMillCount}`;
-            breakdown.stoneText = `INCOME (+${incomes.stone}/10s)\n\nQuarries: ${quarryCount}`;
+            breakdown.woodText = `INCOME (+${incomes.wood}/10s)\n\nLumber Mills: ${numMills}`;
+            breakdown.stoneText = `INCOME (+${incomes.stone}/10s)\n\nQuarries: ${numQuarries}`;
             
-            breakdown.foodText = `PRODUCED (${food.max}):\nFarms: +${breakdown.foodFarms}\nFishing Boats: +${breakdown.foodBoats}\n\nCONSUMED (${food.used}):\nTowns/Capital: -${breakdown.foodTowns}\nHouses: -${breakdown.foodHouses}`;
-            breakdown.wfText = `MAX WORKFORCE (${workforce.max}):\nBase Pool: +${breakdown.wfBase}\nHouses: +${breakdown.wfHouses}\nGuilds: +${breakdown.wfGuilds}\nSlime Penalties: -${breakdown.wfSlimePenalty}\n\nUSED WORKFORCE (${workforce.used}):\nMills: -${breakdown.wfMills}\nQuarries: -${breakdown.wfQuarries}\nMines: -${breakdown.wfMines}\nFarms: -${breakdown.wfFarms}\nBoats: -${breakdown.wfBoats}\nShipyards: -${breakdown.wfShipyards}`;
+            breakdown.foodText = `PRODUCED (${food.max}):\nFarms: +${breakdown.foodFarms} (${numFarms} farms)\nFishing Boats: +${breakdown.foodBoats} (${numBoats} boats)\n\nCONSUMED (${food.used}):\nTowns/Capital: -${breakdown.foodTowns}\nHouses: -${breakdown.foodHouses} (${numHouses} houses)`;
+            breakdown.wfText = `MAX WORKFORCE (${workforce.max}):\nBase Pool: +${breakdown.wfBase}\nHouses: +${breakdown.wfHouses} (${numHouses} houses)\nGuilds: +${breakdown.wfGuilds}\nSlime Penalties: -${breakdown.wfSlimePenalty}\n\nUSED WORKFORCE (${workforce.used}):\nMills: -${breakdown.wfMills} (${numMills} mills)\nQuarries: -${breakdown.wfQuarries} (${numQuarries} quarries)\nMines: -${breakdown.wfMines} (${numMines} mines)\nFarms: -${breakdown.wfFarms} (${numFarms} farms)\nBoats: -${breakdown.wfBoats} (${numBoats} boats)\nShipyards: -${breakdown.wfShipyards} (${numShipyards} shipyards)`;
             
             updateQuestUI();
         }
@@ -645,17 +659,18 @@
                     }
                 }
                 
-                document.getElementById('sync-indicator').innerText = "Live Synced.";
                 calculateNetworks();
+                document.getElementById('sync-indicator').innerText = "Live Synced.";
                 
                 let capState = stateGrid[capitalPos.row - 1][capitalPos.col - 1] || "";
                 
-                let bankMatch = capState.match(/:BankG(\d+)W(\d+)S(\d+)(?:F(\d+))?/);
+                let bankMatch = capState.match(/:BankG(\d+)W(\d+)S(\d+)(?:F(\d+))?(?:B(\d+))?/);
                 if (bankMatch) {
                     resources.gold = parseInt(bankMatch[1]);
                     resources.wood = parseInt(bankMatch[2]);
                     resources.stone = parseInt(bankMatch[3]);
                     resources.fish = bankMatch[4] ? parseInt(bankMatch[4]) : 0;
+                    resources.storedBoats = bankMatch[5] ? parseInt(bankMatch[5]) : 0;
                 }
                 
                 let trvMatch = capState.match(/:Trv([A-Z\-]+)/);
@@ -777,7 +792,6 @@
             updateQuestUI();
         }
 
-        // --- NEW TAVERN & INN LOGIC ---
         function updateRosterUI() {
             let html = '';
             if (hiredTravellers.length === 0) {
@@ -789,6 +803,13 @@
                 });
             }
             document.getElementById('roster-content').innerHTML = html;
+        }
+        
+        function updateInventoryUI() {
+            let html = '';
+            html += `<div style="background:#2d2d3d; padding:10px; border-radius:6px; margin-bottom:8px;">🐟 <b style="color:white;">Fish: ${resources.fish}</b><br><span style="font-size:12px; color:#a0aec0;">Use to stock flooded plains.</span></div>`;
+            html += `<div style="background:#2d2d3d; padding:10px; border-radius:6px; margin-bottom:8px;">⛵ <b style="color:white;">Stored Boats: ${resources.storedBoats || 0}</b><br><span style="font-size:12px; color:#a0aec0;">Ready to be deployed on water.</span></div>`;
+            document.getElementById('inventory-content').innerHTML = html;
         }
 
         window.openInnModal = function(r, c) {
@@ -838,37 +859,31 @@
                 if (rawTerr === 'AF') return 'F';
             }
             
-            // --- NEW FLOOD PLAIN LOGIC ---
-            if (rawTerr === 'FP' && rIdx !== undefined && cIdx !== undefined) {
-                let isFlooded = false;
-                const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
-                for(let d of dirs) {
-                    let nr = rIdx + d[0], nc = cIdx + d[1];
-                    if (nr >= 0 && nr < GRID_UNITS && nc >= 0 && nc < GRID_UNITS) {
-                        let nRaw = mapGrid[nr][nc];
-                        let nSt = stateGrid[nr][nc] || '';
-                        if (nRaw === 'DR' && nSt.includes(':Dam')) isFlooded = true;
-                        if (nRaw === 'RBD' && !nSt.includes(':Looted')) isFlooded = true;
-                    }
+            let isFlooded = false;
+            if (['FP', 'R', 'DR', 'RBD'].includes(rawTerr) && rIdx !== undefined && cIdx !== undefined) {
+                if (tracker.floodedRivers && tracker.floodedRivers[rIdx][cIdx]) {
+                    isFlooded = true;
                 }
-                if (isFlooded) return 'W';
-                // If not flooded, act like normal plains but visually unique
             }
             
             if (!st.startsWith('U')) {
+                if (isFlooded) return 'FL'; 
                 if (rawTerr === 'DW' || rawTerr === 'WBF' || rawTerr === 'WA') return 'W';
                 if (rawTerr === 'FWD' || rawTerr === 'AF') return 'F';
                 if (rawTerr === 'MCR' || rawTerr === 'AM') return 'M';
-                if (rawTerr === 'RBD' || rawTerr === 'DR') return 'R';
+                if (rawTerr === 'RBD' || rawTerr === 'DR' || rawTerr === 'TOD') return 'R';
                 if (rawTerr === 'PG' || rawTerr === 'AP' || rawTerr === 'FP') return 'P';
                 if (rawTerr === 'I') return 'P';
                 if (rawTerr && typeof rawTerr === 'string' && rawTerr.startsWith('WH')) return 'M'; 
             }
             
+            if (isFlooded) return 'FL'; 
+            
             if (st.includes(':Looted')) {
                 if (rawTerr === 'MCR') return 'MCR'; 
                 if (rawTerr === 'RBD') return 'R'; 
                 if (rawTerr === 'I') return 'I'; 
+                if (rawTerr === 'WBF') return 'W'; 
             }
 
             if (st.includes(':Cleared')) return 'P';
@@ -888,11 +903,12 @@
             if (st.includes(':ClearedSlime')) base += ':ClearedSlime';
             if (st.includes(':Looted')) base += ':Looted';
             if (st.includes(':Stocked')) base += ':Stocked';
+            if (st.includes(':Dam')) base += ':Dam';
             
             let capMatch = st.match(/:Cap\d+/); if(capMatch) base += capMatch[0];
             let qMatch = st.match(/:Q\d+/); if(qMatch) base += qMatch[0];
             let fhMatch = st.match(/:FH\d+/); if(fhMatch) base += fhMatch[0];
-            let bankMatch = st.match(/:BankG\d+W\d+S\d+(?:F\d+)?/); if(bankMatch) base += bankMatch[0];
+            let bankMatch = st.match(/:BankG\d+W\d+S\d+(?:F\d+)?(?:B\d+)?/); if(bankMatch) base += bankMatch[0];
             let tapMatch = st.match(/:Tap\d+/); if (tapMatch) base += tapMatch[0];
             let trvMatch = st.match(/:Trv[A-Z\-]+/); if (trvMatch) base += trvMatch[0];
             
@@ -920,51 +936,40 @@
             return false;
         }
 
-        function hasNetworkConnection(nr, nc, visitedWH = false) {
+        function hasLocalRouting(nr, nc) {
             if (nr < 0 || nr >= GRID_UNITS || nc < 0 || nc >= GRID_UNITS) return false;
             let st = stateGrid[nr][nc] || 'H';
             let rawTerr = mapGrid[nr][nc] || 'P';
             let terr = getEffectiveTerrain(rawTerr, st, nr, nc);
-            
-            let isConnected = st.startsWith('U') && (
-                st.includes(':Road') || st.includes(':Lane') || terr === 'T' || terr === 'C' || terr === 'BA' ||
-                st.includes(':House') || st.includes(':LumberMill') || st.includes(':Quarry') || 
-                st.includes(':Mine') || st.includes(':Shipyard') || st.includes(':Farm')
+            return st.startsWith('U') && (
+                st.includes(':Road') || st.includes(':Lane') || st.includes(':Shipyard') || st.includes(':Dam') || 
+                st.includes(':Farm') || st.includes(':LumberMill') || st.includes(':Quarry') || 
+                st.includes(':Mine') || st.includes(':House') || st.includes(':Boat') || st.includes(':Stocked') ||
+                terr === 'C' || terr === 'T' || terr === 'BA' || terr === 'WH'
             );
-            
-            if (!isConnected && terr === 'WH' && st.startsWith('U') && !visitedWH) {
-                let pair = getWormholePair(rawTerr, nr, nc);
-                if (pair) {
-                    const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
-                    for (let d of dirs) {
-                        if (hasNetworkConnection(pair.r + d[0], pair.c + d[1], true)) return true;
-                    }
-                }
-            }
-            return isConnected;
         }
 
-        function hasLaneAdjacency(row, col) {
-            for (let dr = -1; dr <= 1; dr++) {
-                for (let dc = -1; dc <= 1; dc++) {
-                    if (dr === 0 && dc === 0) continue;
-                    let nr = (row - 1) + dr; let nc = (col - 1) + dc;
-                    if (nr >= 0 && nr < GRID_UNITS && nc >= 0 && nc < GRID_UNITS) {
-                        let st = stateGrid[nr][nc] || '';
-                        if (st.startsWith('U') && (st.includes(':Shipyard') || st.includes(':Lane'))) return true;
+        function canAttachToNetwork(rIdx, cIdx) {
+            const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+            for (let d of dirs) {
+                let nr = rIdx + d[0]; let nc = cIdx + d[1];
+                if (nr >= 0 && nr < GRID_UNITS && nc >= 0 && nc < GRID_UNITS) {
+                    if (networkGrid[nr][nc] && hasLocalRouting(nr, nc)) {
+                        return true;
                     }
                 }
             }
             return false;
         }
 
-        function hasBuildingAdjacency(row, col) {
-            for (let dr = -1; dr <= 1; dr++) {
-                for (let dc = -1; dc <= 1; dc++) {
-                    if (dr === 0 && dc === 0) continue;
-                    let nr = (row - 1) + dr; let nc = (col - 1) + dc;
-                    if (nr >= 0 && nr < GRID_UNITS && nc >= 0 && nc < GRID_UNITS) {
-                        if (hasNetworkConnection(nr, nc)) return true;
+        function hasLaneAdjacency(row, col) {
+            const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+            for (let d of dirs) {
+                let nr = row + d[0]; let nc = col + d[1]; 
+                if (nr >= 0 && nr < GRID_UNITS && nc >= 0 && nc < GRID_UNITS) {
+                    if (networkGrid[nr][nc]) {
+                        let st = stateGrid[nr][nc] || '';
+                        if (st.includes(':Shipyard') || st.includes(':Lane')) return true;
                     }
                 }
             }
@@ -983,12 +988,13 @@
             return false;
         }
 
-        function isWaterType(terr) { return terr === 'W' || terr === 'WF' || terr === 'DW' || terr === 'WBF' || terr === 'WA'; }
-        function isRiverType(terr) { return terr === 'R' || terr === 'RBD' || terr === 'DR'; }
+        function isWaterType(terr) { return terr === 'W' || terr === 'WF' || terr === 'DW' || terr === 'WBF' || terr === 'WA' || terr === 'FL' || terr === 'L'; }
+        function isRiverType(terr) { return terr === 'R' || terr === 'RBD' || terr === 'DR' || terr === 'TOD'; }
 
         function isWheatField(r, c) {
-            let st = stateGrid[r][c];
-            let terr = getEffectiveTerrain(mapGrid[r][c], st, r, c);
+            let st = stateGrid[r][c] || 'H';
+            if (st.includes(':Cleared')) return false;
+            let terr = getEffectiveTerrain(mapGrid[r][c] || 'P', st, r, c);
             if ((terr === 'P' || terr === 'FP') && st.startsWith('U') && !st.includes(':Farm') && !st.includes(':Road') && !st.includes(':House') && !st.includes(':Lane')) {
                 const dirs = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
                 for (let d of dirs) {
@@ -1011,8 +1017,8 @@
             let isVert = (rTop || rBot) && !rLeft && !rRight;
             if (!isHoriz && !isVert) return false; 
 
-            if (isHoriz) return hasNetworkConnection(r-1, c) || hasNetworkConnection(r+1, c);
-            if (isVert) return hasNetworkConnection(r, c-1) || hasNetworkConnection(r, c+1);
+            if (isHoriz) return canAttachToNetwork(r-1, c) || canAttachToNetwork(r+1, c);
+            if (isVert) return canAttachToNetwork(r, c-1) || canAttachToNetwork(r, c+1);
             return false;
         }
 
@@ -1025,7 +1031,7 @@
                     if ((nTerr === 'P' || nTerr === 'FP') && nSt.startsWith('U') && !nSt.includes(':Farm') && !nSt.includes(':Road') && !nSt.includes(':House') && !nSt.includes(':Lane')) fBonus += 1;
                 }
             }
-            if (hiredTravellers.includes('FM')) fBonus += 1; // Farmer Buff
+            if (hiredTravellers.includes('FM')) fBonus += 1; 
             return fBonus;
         }
 
@@ -1034,10 +1040,11 @@
             for (let d of dirs) {
                 let nr = r + d[0]; let nc = c + d[1];
                 if (nr >= 0 && nr < GRID_UNITS && nc >= 0 && nc < GRID_UNITS) {
-                    let st = stateGrid[nr][nc] || 'H'; let terr = mapGrid[nr][nc];
+                    let st = stateGrid[nr][nc] || 'H'; let rawTerr = mapGrid[nr][nc];
                     if (st.startsWith('U')) {
-                        if (terr === 'WF') wBonus += 1;
-                        if (terr === 'WBF') wBonus += 5; 
+                        if (rawTerr === 'WF') wBonus += 1;
+                        if (rawTerr === 'WBF' && !st.includes(':Looted')) wBonus += 3; 
+                        if (st.includes(':Stocked')) wBonus += 1; 
                     }
                 }
             }
@@ -1053,6 +1060,7 @@
                     if (nSt.startsWith('U') && getEffectiveTerrain(mapGrid[nr][nc], nSt, nr, nc) === 'F') fCount += nSt.includes(':Road') ? 0.5 : 1;
                 }
             }
+            if (hiredTravellers.includes('WM')) fCount += 1;
             return fCount;
         }
 
@@ -1069,12 +1077,182 @@
         }
 
         function calculateNetworks() {
-            exploredCount = 0; discoveredTownsCount = 0;
-            shipyardCount = 0; boatCount = 0; farmCount = 0; lumberMillCount = 0; quarryCount = 0;
+            // --- 1. FLOOD FILL LOGIC ---
+            tracker.floodedRivers = Array(GRID_UNITS).fill(0).map(()=>Array(GRID_UNITS).fill(false));
+            let riverQueue = [];
+            
+            for(let r=0; r<GRID_UNITS; r++) {
+                for(let c=0; c<GRID_UNITS; c++) {
+                    let rawTerr = mapGrid[r][c];
+                    let st = stateGrid[r][c] || '';
+                    if ((rawTerr === 'DR' && st.includes(':Dam')) || (rawTerr === 'RBD' && !st.includes(':Looted'))) {
+                        riverQueue.push({r, c});
+                        tracker.floodedRivers[r][c] = true;
+                    }
+                }
+            }
+            
+            while (riverQueue.length > 0) {
+                let curr = riverQueue.shift();
+                const floodDirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+                for (let d of floodDirs) {
+                    let nr = curr.r + d[0];
+                    let nc = curr.c + d[1];
+                    if (nr >= 0 && nr < GRID_UNITS && nc >= 0 && nc < GRID_UNITS) {
+                        let neighborTerr = mapGrid[nr][nc];
+                        let isFloodable = (isRiverType(neighborTerr) && neighborTerr !== 'TOD') || neighborTerr === 'FP';
+
+                        if (!tracker.floodedRivers[nr][nc] && isFloodable) {
+                            tracker.floodedRivers[nr][nc] = true;
+                            riverQueue.push({ r: nr, c: nc });
+                        }
+                    }
+                }
+            }
+
+            // Kill Stranded Fish
+            let fishDied = false;
+            for(let r=0; r<GRID_UNITS; r++) {
+                for(let c=0; c<GRID_UNITS; c++) {
+                    let st = stateGrid[r][c];
+                    if (st && st.includes(':Stocked')) {
+                        let rawTerr = mapGrid[r][c];
+                        let isFlooded = false;
+                        if ((rawTerr === 'FP' || rawTerr === 'R' || rawTerr === 'DR' || rawTerr === 'RBD') && tracker.floodedRivers[r][c]) {
+                            isFlooded = true;
+                        }
+                        if (!isFlooded) {
+                            let newSt = st.replace(/:Stocked/g, '');
+                            stateGrid[r][c] = newSt;
+                            updateQueue.push({row: r+1, col: c+1, value: newSt, user: currentUser});
+                            fishDied = true;
+                        }
+                    }
+                }
+            }
+            if (fishDied && !isUpdatingBackend) processUpdateQueue();
+
+            // --- 2. MULTI-PHASE MATRIX BFS NETWORK FLOODING ---
+            for (let r = 0; r < GRID_UNITS; r++) {
+                for (let c = 0; c < GRID_UNITS; c++) {
+                    networkGrid[r][c] = false;
+                }
+            }
+            
+            let visited = Array(GRID_UNITS).fill(0).map(()=>Array(GRID_UNITS).fill(false));
+            let netQueue = [];
+            
+            if (capitalPos.row > 0 && capitalPos.col > 0) {
+                let cr = capitalPos.row - 1; let cc = capitalPos.col - 1;
+                if (stateGrid[cr] && stateGrid[cr][cc] && stateGrid[cr][cc].startsWith('U')) {
+                    netQueue.push({r: cr, c: cc});
+                    visited[cr][cc] = true;
+                    networkGrid[cr][cc] = true;
+                }
+            }
+
+            // Phase 1 Spreading Core
+            while(netQueue.length > 0) {
+                let curr = netQueue.shift();
+                let rawTerr = mapGrid[curr.r][curr.c];
+                let terr = getEffectiveTerrain(rawTerr, stateGrid[curr.r][curr.c], curr.r, curr.c);
+
+                if(terr === 'WH') {
+                    let pair = getWormholePair(rawTerr, curr.r, curr.c);
+                    if (pair && stateGrid[pair.r][pair.c].startsWith('U') && !visited[pair.r][pair.c]) {
+                        visited[pair.r][pair.c] = true;
+                        networkGrid[pair.r][pair.c] = true;
+                        netQueue.push({r: pair.r, c: pair.c});
+                    }
+                }
+
+                const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+                for(let d of dirs) {
+                    let nr = curr.r + d[0]; let nc = curr.c + d[1];
+                    if(nr >= 0 && nr < GRID_UNITS && nc >= 0 && nc < GRID_UNITS) {
+                        let nSt = stateGrid[nr][nc];
+                        if(nSt && nSt.startsWith('U') && !visited[nr][nc]) {
+                            let nTerr = getEffectiveTerrain(mapGrid[nr][nc], nSt, nr, nc);
+                            
+                            let isNetworkNode = nSt.includes(':Road') || nSt.includes(':Lane') || nSt.includes(':Shipyard') || nSt.includes(':Dam') || 
+                                                nSt.includes(':Farm') || nSt.includes(':LumberMill') || nSt.includes(':Quarry') || 
+                                                nSt.includes(':Mine') || nSt.includes(':House') || nSt.includes(':Boat') || nSt.includes(':Stocked') || 
+                                                nTerr === 'C' || nTerr === 'T' || nTerr === 'BA' || nTerr === 'WH';
+
+                            if(isNetworkNode) {
+                                visited[nr][nc] = true;
+                                networkGrid[nr][nc] = true;
+                                netQueue.push({r: nr, c: nc});
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Phase 2 Shipyard Proximity Scanning Validation
+            let activeShipyards = [];
+            for (let r = 0; r < GRID_UNITS; r++) {
+                for (let c = 0; c < GRID_UNITS; c++) {
+                    if (stateGrid[r][c] && stateGrid[r][c].includes(':Shipyard') && networkGrid[r][c]) {
+                        activeShipyards.push({r, c});
+                    }
+                }
+            }
+
+            let boatQueue = [];
+            for (let r = 0; r < GRID_UNITS; r++) {
+                for (let c = 0; c < GRID_UNITS; c++) {
+                    if (stateGrid[r][c] && stateGrid[r][c].includes(':Boat') && !networkGrid[r][c]) {
+                        let closeToShipyard = false;
+                        for (let sy of activeShipyards) {
+                            if (Math.max(Math.abs(r - sy.r), Math.abs(c - sy.c)) <= 10) {
+                                closeToShipyard = true;
+                                break;
+                            }
+                        }
+                        if (closeToShipyard) {
+                            networkGrid[r][c] = true;
+                            visited[r][c] = true;
+                            boatQueue.push({r, c});
+                        }
+                    }
+                }
+            }
+
+            // Phase 3 Spread Maritime Logistics into Lanes
+            while(boatQueue.length > 0) {
+                let curr = boatQueue.shift();
+                const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+                for(let d of dirs) {
+                    let nr = curr.r + d[0]; let nc = curr.c + d[1];
+                    if(nr >= 0 && nr < GRID_UNITS && nc >= 0 && nc < GRID_UNITS) {
+                        let nSt = stateGrid[nr][nc];
+                        if(nSt && nSt.startsWith('U') && !visited[nr][nc]) {
+                            let nTerr = getEffectiveTerrain(mapGrid[nr][nc], nSt, nr, nc);
+                            let isNetworkNode = nSt.includes(':Road') || nSt.includes(':Lane') || nSt.includes(':Shipyard') || nSt.includes(':Dam') || 
+                                                nSt.includes(':Farm') || nSt.includes(':LumberMill') || nSt.includes(':Quarry') || 
+                                                nSt.includes(':Mine') || nSt.includes(':House') || nSt.includes(':Boat') || nSt.includes(':Stocked') || 
+                                                nTerr === 'C' || nTerr === 'T' || nTerr === 'BA' || nTerr === 'WH';
+                            if(isNetworkNode) {
+                                visited[nr][nc] = true;
+                                networkGrid[nr][nc] = true;
+                                boatQueue.push({r: nr, c: nc});
+                            }
+                        }
+                    }
+                }
+            }
+
+            // --- 3. THE GLOBAL TRACKER TALLY DATA LOOP ---
+            tracker.explored = 0;
+            tracker.terr = {};
+            tracker.built = {};
+            tracker.tags = {};
+            
             workforce.used = 0; workforce.max = 10;
             food.used = 0; food.max = 0;
             
-            if (hiredTravellers.includes('CL')) workforce.max += 5; // Cleric Buff
+            if (hiredTravellers.includes('CL')) workforce.max += 5;
             
             breakdown = {
                 goldBase: 0, goldTowns: 0, goldMines: 0,
@@ -1088,6 +1266,9 @@
             let qMatch = capState.match(/:Q(\d+)/); questTier = qMatch ? parseInt(qMatch[1]) : 0;
             let fhMatch = capState.match(/:FH(\d+)/); freeHouses = fhMatch ? parseInt(fhMatch[1]) : 0;
             
+            connectedTownsCount = 0;
+            discoveredTownsCount = 0;
+            
             for(let r=0; r<GRID_UNITS; r++) {
                 for(let c=0; c<GRID_UNITS; c++) {
                     let st = stateGrid[r][c];
@@ -1095,68 +1276,71 @@
                     let terr = getEffectiveTerrain(rawTerr, st, r, c);
 
                     if(st && st.startsWith('U')) {
-                        exploredCount++;
-                        if (terr === 'T') discoveredTownsCount++;
-                        if (terr === 'PG') { workforce.max += 10; breakdown.wfGuilds += 10; }
+                        tracker.explored++;
+                        tracker.terr[rawTerr] = (tracker.terr[rawTerr] || 0) + 1;
+                        if (rawTerr === 'T') discoveredTownsCount++;
                         
-                        if (st.includes(':Stocked')) { food.max += 3; breakdown.foodFarms += 3; } // Stocked Flood Plain boost
-                        
-                        if (isAlienSlime(rawTerr, st)) {
+                        if (['AM', 'AP', 'AF'].includes(rawTerr) && !st.includes(':ClearedSlime')) {
                             food.max -= 10; breakdown.foodTowns += 10; 
                             workforce.max -= 10; breakdown.wfSlimePenalty += 10;
                         }
-
-                        if (terr === 'C' || terr === 'T') { food.used += 5; breakdown.foodTowns += 5; }
-                        if (st.includes(':House')) { workforce.max += 5; breakdown.wfHouses += 5; food.used += 1; breakdown.foodHouses += 1; }
-
-                        if (st.includes(':Shipyard')) { shipyardCount++; workforce.used += WORKFORCE_COSTS.shipyard; breakdown.wfShipyards += WORKFORCE_COSTS.shipyard; }
-                        if (st.includes(':Boat')) { boatCount++; workforce.used += WORKFORCE_COSTS.boat; breakdown.wfBoats += WORKFORCE_COSTS.boat; }
-                        if (st.includes(':LumberMill')) { lumberMillCount++; workforce.used += WORKFORCE_COSTS.lumbermill; breakdown.wfMills += WORKFORCE_COSTS.lumbermill; }
-                        if (st.includes(':Quarry')) { quarryCount++; workforce.used += WORKFORCE_COSTS.quarry; breakdown.wfQuarries += WORKFORCE_COSTS.quarry; }
-                        if (st.includes(':Mine')) { workforce.used += WORKFORCE_COSTS.mine; breakdown.wfMines += WORKFORCE_COSTS.mine; }
-                        if (st.includes(':Farm')) { farmCount++; workforce.used += WORKFORCE_COSTS.farm; breakdown.wfFarms += WORKFORCE_COSTS.farm; }
-
-                        if (st.includes(':Farm')) { let fb = getFarmBonus(r, c); food.max += fb; breakdown.foodFarms += fb; }
-                        if (st.includes(':Boat')) { let wb = getBoatBonus(r, c); food.max += wb; breakdown.foodBoats += wb; }
-                    }
-                }
-            }
-
-            globalStorageCap = 200 + ((capitalTier - 1) * 100);
-            globalGoldCap = (capitalTier * 1000) + (discoveredTownsCount * 100);
-
-            connectedTownsCount = 0;
-            let visited = Array(GRID_UNITS).fill(0).map(()=>Array(GRID_UNITS).fill(false));
-            let queue = [{r: capitalPos.row - 1, c: capitalPos.col - 1}];
-            
-            while(queue.length > 0) {
-                let curr = queue.shift();
-                if(visited[curr.r][curr.c]) continue;
-                visited[curr.r][curr.c] = true;
-
-                let rawTerr = mapGrid[curr.r][curr.c];
-                let terr = getEffectiveTerrain(rawTerr, stateGrid[curr.r][curr.c], curr.r, curr.c);
-                if(terr === 'T') connectedTownsCount++;
-
-                if(terr === 'WH') {
-                    let pair = getWormholePair(rawTerr, curr.r, curr.c);
-                    if (pair && !visited[pair.r][pair.c]) queue.push({r: pair.r, c: pair.c});
-                }
-
-                const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
-                for(let d of dirs) {
-                    let nr = curr.r + d[0]; let nc = curr.c + d[1];
-                    if(nr >= 0 && nr < GRID_UNITS && nc >= 0 && nc < GRID_UNITS) {
-                        let st = stateGrid[nr][nc];
-                        if(st && st.startsWith('U') && !visited[nr][nc]) {
-                            let nTerr = getEffectiveTerrain(mapGrid[nr][nc], st, nr, nc);
-                            if(st.includes(':Road') || st.includes(':Lane') || st.includes(':Shipyard') || nTerr === 'C' || nTerr === 'T' || nTerr === 'BA' || nTerr === 'WH') {
-                                queue.push({r: nr, c: nc});
+                        
+                        if (networkGrid[r][c]) {
+                            if (terr === 'T') connectedTownsCount++;
+                            if (terr === 'PG') { workforce.max += 10; breakdown.wfGuilds += 10; }
+                            if (terr === 'C' || terr === 'T') { food.used += 5; breakdown.foodTowns += 5; }
+                            
+                            let tags = st.split(':');
+                            for (let i = 1; i < tags.length; i++) {
+                                let t = tags[i];
+                                
+                                // Skip submerged land buildings so they use no workforce and produce no stats!
+                                if (terr === 'FL' && ['Farm', 'LumberMill', 'Quarry', 'Mine', 'House'].includes(t)) continue;
+                                
+                                if (WORKFORCE_COSTS[t] !== undefined) {
+                                    tracker.built[t] = (tracker.built[t] || 0) + 1;
+                                } else {
+                                    tracker.tags[t] = (tracker.tags[t] || 0) + 1;
+                                }
                             }
+                            
+                            if (st.includes(':Farm') && terr !== 'FL') { let fb = getFarmBonus(r, c); food.max += fb; breakdown.foodFarms += fb; }
+                            if (st.includes(':Boat') && isWaterType(terr)) { let wb = getBoatBonus(r, c); food.max += wb; breakdown.foodBoats += wb; }
                         }
                     }
                 }
             }
+
+            for (let building in tracker.built) {
+                if (WORKFORCE_COSTS[building] !== undefined) {
+                    let cost = tracker.built[building] * WORKFORCE_COSTS[building];
+                    workforce.used += cost;
+                    
+                    if (building === 'House') {
+                        workforce.max += tracker.built['House'] * 5; 
+                        breakdown.wfHouses += tracker.built['House'] * 5;
+                        food.used += tracker.built['House'] * 1; 
+                        breakdown.foodHouses += tracker.built['House'] * 1;
+                    }
+                    else if (building === 'Shipyard') breakdown.wfShipyards += cost;
+                    else if (building === 'Boat') breakdown.wfBoats += cost;
+                    else if (building === 'LumberMill') breakdown.wfMills += cost;
+                    else if (building === 'Quarry') breakdown.wfQuarries += cost;
+                    else if (building === 'Mine') breakdown.wfMines += cost;
+                    else if (building === 'Farm') breakdown.wfFarms += cost;
+                }
+            }
+
+            exploredCount = tracker.explored;
+            shipyardCount = tracker.built['Shipyard'] || 0;
+            boatCount = tracker.built['Boat'] || 0;
+            farmCount = tracker.built['Farm'] || 0;
+            lumberMillCount = tracker.built['LumberMill'] || 0;
+            quarryCount = tracker.built['Quarry'] || 0;
+            tenementHouseCount = tracker.built['House'] || 0;
+
+            globalStorageCap = 200 + ((capitalTier - 1) * 100);
+            globalGoldCap = (capitalTier * 1000) + (discoveredTownsCount * 100);
         }
 
         // --- Render Draw Engine ---
@@ -1176,10 +1360,10 @@
         }
         
         function drawSmartRoad(x, y, r, c, isLane) {
-            let rTop = hasNetworkConnection(r-1, c);
-            let rBot = hasNetworkConnection(r+1, c);
-            let rLeft = hasNetworkConnection(r, c-1);
-            let rRight = hasNetworkConnection(r, c+1);
+            let rTop = hasLocalRouting(r-1, c);
+            let rBot = hasLocalRouting(r+1, c);
+            let rLeft = hasLocalRouting(r, c-1);
+            let rRight = hasLocalRouting(r, c+1);
 
             ctx.fillStyle = isLane ? '#63b3ed' : '#d69e2e';
             let thick = 10; let offset = (TILE_SIZE - thick) / 2; let half = TILE_SIZE / 2;
@@ -1218,10 +1402,10 @@
                     let currentStyle = (isUncovered || isHalfFog) ? (TERRAIN_STYLES[effTerr] || TERRAIN_STYLES['P']) : TERRAIN_STYLES['H_FOG'];
 
                     if (isHalfFog) {
-                        ctx.fillStyle = effTerr === 'BA' ? '#d53f8c' : currentStyle.color;
+                        ctx.fillStyle = currentStyle.color;
                         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
 
-                        if (effTerr === 'R' || effTerr === 'RBD' || effTerr === 'DR') drawSmartRiver(x, y, r, c);
+                        if (effTerr === 'R' || effTerr === 'RBD' || effTerr === 'DR' || effTerr === 'TOD') drawSmartRiver(x, y, r, c);
 
                         if (currentStyle.text) {
                             ctx.fillStyle = "#ffffff";
@@ -1238,14 +1422,20 @@
                         
                     } else if (isUncovered) {
                         
-                        if (effTerr === 'BA') {
-                            ctx.fillStyle = hasNetworkConnection(r, c) ? '#DBD370' : '#d53f8c'; 
+                        let hasBuilding = state.includes(':Farm') || state.includes(':LumberMill') || state.includes(':Quarry') || state.includes(':Mine') || state.includes(':House') || state.includes(':Shipyard') || state.includes(':Boat') || state.includes(':Stocked') || rawTerr === 'T' || rawTerr === 'BA';
+                        
+                        if (hasBuilding && !networkGrid[r][c] && effTerr !== 'C') {
+                            ctx.fillStyle = '#d53f8c'; 
+                        } else if (effTerr === 'BA') {
+                            ctx.fillStyle = networkGrid[r][c] ? '#DBD370' : '#d53f8c'; 
+                        } else if (effTerr === 'T' && !networkGrid[r][c]) {
+                            ctx.fillStyle = '#d53f8c'; 
                         } else {
                             ctx.fillStyle = currentStyle.color;
                         }
                         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
 
-                        if (effTerr === 'R' || effTerr === 'RBD' || effTerr === 'DR') drawSmartRiver(x, y, r, c);
+                        if (effTerr === 'R' || effTerr === 'RBD' || effTerr === 'DR' || effTerr === 'TOD') drawSmartRiver(x, y, r, c);
                         
                         if (state.includes(':Road')) drawSmartRoad(x, y, r, c, false);
                         if (state.includes(':Lane')) drawSmartRoad(x, y, r, c, true);
@@ -1275,17 +1465,19 @@
                             }
                         }
 
-                        if (state.includes(':House')) ctx.fillText('🏡', x + TILE_SIZE/2, y + TILE_SIZE/2);
-                        if (state.includes(':LumberMill')) ctx.fillText('🪵', x + TILE_SIZE/2, y + TILE_SIZE/2);
-                        if (state.includes(':Quarry')) ctx.fillText('⛏️', x + TILE_SIZE/2, y + TILE_SIZE/2);
-                        if (state.includes(':Mine')) ctx.fillText('🏭', x + TILE_SIZE/2, y + TILE_SIZE/2);
+                        if (state.includes(':House') && effTerr !== 'FL') ctx.fillText('🏡', x + TILE_SIZE/2, y + TILE_SIZE/2);
+                        if (state.includes(':LumberMill') && effTerr !== 'FL') ctx.fillText('🪵', x + TILE_SIZE/2, y + TILE_SIZE/2);
+                        if (state.includes(':Quarry') && effTerr !== 'FL') ctx.fillText('⛏️', x + TILE_SIZE/2, y + TILE_SIZE/2);
+                        if (state.includes(':Mine') && effTerr !== 'FL') ctx.fillText('🏭', x + TILE_SIZE/2, y + TILE_SIZE/2);
+                        if (state.includes(':Farm') && effTerr !== 'FL') ctx.fillText('🚜', x + TILE_SIZE/2, y + TILE_SIZE/2);
+                        
                         if (state.includes(':Shipyard')) ctx.fillText('⚓', x + TILE_SIZE/2, y + TILE_SIZE/2);
-                        if (state.includes(':Farm')) ctx.fillText('🚜', x + TILE_SIZE/2, y + TILE_SIZE/2);
                         if (state.includes(':Boat')) ctx.fillText('⛵', x + TILE_SIZE/2, y + TILE_SIZE/2);
                         if (state.includes(':Dam')) ctx.fillText('🧱', x + TILE_SIZE/2, y + TILE_SIZE/2);
                         if (state.includes(':Stocked')) ctx.fillText('🐟', x + TILE_SIZE/2, y + TILE_SIZE/2);
                         
-                        // Cooldown Tracker Tracing Red Line
+                        if (effTerr === 'FL' && rawTerr === 'RBD' && !state.includes(':Looted')) ctx.fillText('🪵', x + TILE_SIZE/2, y + TILE_SIZE/2);
+                        
                         let key = `${r+1}-${c+1}`;
                         if (harvestData[key] && harvestData[key].clicks >= 10) {
                             let elapsed = now - harvestData[key].lastClick;
@@ -1312,7 +1504,7 @@
                         ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3;
                         ctx.strokeRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4); ctx.lineWidth = 1;
                         
-                        if (qbActive && lastAnchorTile) {
+                        if (quickBuildActive && lastAnchorTile) {
                             if (lastAnchorTile.r === r && lastAnchorTile.c !== c) {
                                 ctx.strokeStyle = 'rgba(214, 158, 46, 0.4)'; ctx.strokeRect(x + 4, y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
                             }
@@ -1328,13 +1520,12 @@
         canvas.addEventListener('click', (e) => {
             if (!currentUser) return;
             
-            // STRICT DEADZONE: If mouse moved more than 5px during the click, IGNORE it (it was a pan drag)
-            if (Math.abs(e.clientX - clickStartX) > 5 || Math.abs(e.clientY - clickStartY) > 5) return;
+            if (Math.abs(e.clientX - ptrStartX) > 5 || Math.abs(e.clientY - ptrStartY) > 5) return;
             
             if (activeQbType !== null) {
-                if (!qbActive && !justBuilt) {
+                if (!quickBuildActive && !justBuilt) {
                     document.getElementById('quick-build-offer').style.display = 'none';
-                    activeQbType = null; qbActive = false;
+                    activeQbType = null; quickBuildActive = false;
                 }
             }
             justBuilt = false;
@@ -1349,8 +1540,7 @@
                 let rIdx = row - 1; let cIdx = col - 1;
                 let effTerr = getEffectiveTerrain(rawTerr, state, rIdx, cIdx);
                 
-                // --- QUICK BUILD INTERCEPT ---
-                if (qbActive && activeQbType && lastAnchorTile) {
+                if (quickBuildActive && activeQbType && lastAnchorTile) {
                     let isLine = (lastAnchorTile.r === rIdx || lastAnchorTile.c === cIdx);
                     let path = []; let valid = true;
                     
@@ -1374,9 +1564,11 @@
                         if (!ptSt.startsWith('U')) { valid = false; break; }
                         
                         if (actionKey === 'Road') {
-                            if (capitalTier < 1 || ['M','H','W','DW','WF','WBF','WA','T','C','BA','FWD','MCR','PG','I'].includes(ptTerr) || (ptTerr && typeof ptTerr === 'string' && ptTerr.startsWith('WH')) || isWheatField(pt.r, pt.c) || isAlienSlime(mapGrid[pt.r][pt.c], ptSt) || (ptTerr === 'R' && !canBuildFord(pt.r, pt.c))) valid = false;
+                            if (capitalTier < 1 || ['M','H','W','DW','WF','WBF','WA','FL','L','T','C','BA','FWD','MCR','PG','I'].includes(ptTerr) || (ptTerr && typeof ptTerr === 'string' && ptTerr.startsWith('WH')) || isWheatField(pt.r, pt.c) || isAlienSlime(mapGrid[pt.r][pt.c], ptSt) || (ptTerr === 'R' && !canBuildFord(pt.r, pt.c))) valid = false;
                         } else if (actionKey === 'Lane') {
-                            if (capitalTier < 2 || (!['W','WF','WBF','DW','WA'].includes(ptTerr))) valid = false;
+                            if (capitalTier < 2 || (!['W','WF','WBF','DW','WA','FL','L'].includes(ptTerr))) valid = false;
+                        } else if (actionKey === 'Lane') {
+                            if (capitalTier < 2 || (!['W','WF','WBF','DW','WA','FL'].includes(ptTerr))) valid = false;
                         } else if (actionKey === 'Cleared') {
                             if (capitalTier < 3 || ptTerr !== 'F' || ptSt.includes(':Planted')) valid = false;
                         } else if (actionKey === 'Planted') {
@@ -1409,43 +1601,50 @@
                     }
                 }
 
-                let isMill = state.includes(':LumberMill');
-                let isQuarry = state.includes(':Quarry');
+                let isMill = state.includes(':LumberMill') && effTerr !== 'FL';
+                let isQuarry = state.includes(':Quarry') && effTerr !== 'FL';
                 let isCapital = (effTerr === 'C');
-                let isTown = (effTerr === 'T' && hasNetworkConnection(row-1, col-1));
-                let isFish = (rawTerr === 'WBF' && state.startsWith('U'));
+                let isTown = (effTerr === 'T' && networkGrid[rIdx][cIdx]);
+                let isFish = (rawTerr === 'WBF' && state.startsWith('U') && !state.includes(':Looted'));
                 
                 if (state.startsWith('U') && (isMill || isQuarry || isCapital || isTown || isFish)) {
-                    let key = `${row}-${col}`;
-                    if (!harvestData[key]) harvestData[key] = { clicks: 0, lastClick: 0 };
-                    
-                    let now = Date.now();
-                    if (now - harvestData[key].lastClick >= 20000 && harvestData[key].clicks >= 10) {
-                        harvestData[key].clicks = 0; 
-                    }
-                    
-                    if (harvestData[key].clicks < 10) {
-                        harvestData[key].clicks++;
-                        harvestData[key].lastClick = now;
-                        if (isMill) {
-                            resources.wood += 1;
-                            spawnFloatingText("+1 Wood", e.clientX, e.clientY, '#48bb78');
-                        } else if (isQuarry) {
-                            resources.stone += 1;
-                            spawnFloatingText("+1 Stone", e.clientX, e.clientY, '#a0aec0');
-                        } else if (isCapital || isTown) {
-                            let taxAmt = isCapital ? (10 * capitalTier) : 10;
-                            resources.gold += taxAmt;
-                            spawnFloatingText(`+${taxAmt} Gold`, e.clientX, e.clientY, '#f1c40f');
-                            if (isCapital && questTier === 0) questCapitalTaps++;
-                        } else if (isFish) {
+                    if (networkGrid[rIdx][cIdx] || isFish || isCapital) {
+                        if (isFish) {
                             resources.fish += 1;
                             spawnFloatingText("+1 Fish", e.clientX, e.clientY, '#3182ce');
+                            pushTileUpdate(row, col, getBaseStateString(stateGrid[rIdx][cIdx]) + ':Looted'); 
+                            updateResourceUI();
+                            return;
                         }
-                        updateResourceUI();
-                        renderMap(); 
-                    } else {
-                        spawnFloatingText("Depleted! Wait 20s", e.clientX, e.clientY, '#fc8181');
+                        
+                        let key = `${row}-${col}`;
+                        if (!harvestData[key]) harvestData[key] = { clicks: 0, lastClick: 0 };
+                        
+                        let now = Date.now();
+                        if (now - harvestData[key].lastClick >= 20000 && harvestData[key].clicks >= 10) {
+                            harvestData[key].clicks = 0; 
+                        }
+                        
+                        if (harvestData[key].clicks < 10) {
+                            harvestData[key].clicks++;
+                            harvestData[key].lastClick = now;
+                            if (isMill) {
+                                resources.wood += 1;
+                                spawnFloatingText("+1 Wood", e.clientX, e.clientY, '#48bb78');
+                            } else if (isQuarry) {
+                                resources.stone += 1;
+                                spawnFloatingText("+1 Stone", e.clientX, e.clientY, '#a0aec0');
+                            } else if (isCapital || isTown) {
+                                let taxAmt = isCapital ? (10 * capitalTier) : 10;
+                                resources.gold += taxAmt;
+                                spawnFloatingText(`+${taxAmt} Gold`, e.clientX, e.clientY, '#f1c40f');
+                                if (isCapital && questTier === 0) questCapitalTaps++;
+                            }
+                            updateResourceUI();
+                            renderMap(); 
+                        } else {
+                            spawnFloatingText("Depleted! Wait 20s", e.clientX, e.clientY, '#fc8181');
+                        }
                     }
                 }
 
@@ -1476,7 +1675,7 @@
                         if (rawTerr && typeof rawTerr === 'string' && rawTerr.startsWith('WH')) {
                             showDialogue("Deep Cave Found", "You found a deep cave. Do you go inside?", "Yes", () => {
                                 showInfoModal("Wormhole", "It seems to be some sort of portal that defies logic...");
-                                let pair = getWormholePair(rawTerr, row-1, col-1);
+                                let pair = getWormholePair(rawTerr, rIdx, cIdx);
                                 if (pair) {
                                     pushTileUpdate(pair.r + 1, pair.c + 1, 'U');
                                     selectedTile = { row: pair.r + 1, col: pair.c + 1 };
@@ -1488,7 +1687,7 @@
                         if (rawTerr === 'WA') {
                             showDialogue("Atlantis Found", "You found a great underwater city! Loot for 2000 Gold.", "Claim", () => {
                                 resources.gold += 2000;
-                                updateResourceUI(); pushTileUpdate(row, col, 'U:Looted'); 
+                                updateResourceUI(); pushTileUpdate(selectedTile.row, selectedTile.col, 'U:Looted'); 
                             });
                         }
                         
@@ -1527,30 +1726,58 @@
             
             document.getElementById('ui-coord').innerText = `R: ${selectedTile.row}, C: ${selectedTile.col}`;
             
+            let isGrain = isWheatField(rIdx, cIdx);
+            if (isGrain) {
+                document.getElementById('inspector-title').innerText = "Grain Field";
+            } else {
+                document.getElementById('inspector-title').innerText = TERRAIN_STYLES[terr] ? TERRAIN_STYLES[terr].label : 'Tile Inspector';
+            }
+            
             let infoText = "-";
             if (state.startsWith('U')) {
-                if (terr === 'C') infoText = `Generating ${exploredCount} Gold / 10s\nConsuming 5 Food`;
-                else if (terr === 'T') infoText = `Generating 15 Gold / 10s (If Conn)\nConsuming 5 Food`;
-                else if (state.includes(':House')) infoText = `Providing 5 Workforce\nConsuming 1 Food`;
-                else if (state.includes(':Mine')) infoText = `Generating 15 Gold / 10s`;
-                else if (state.includes(':LumberMill')) infoText = `Generating ${1 + getLumberBonus(rIdx, cIdx)} Wood / 10s`;
-                else if (state.includes(':Quarry')) infoText = `Generating ${1 + getQuarryBonus(rIdx, cIdx)} Stone / 10s`;
-                else if (state.includes(':Farm')) infoText = `Providing ${getFarmBonus(rIdx, cIdx)} Food`;
-                else if (state.includes(':Boat')) infoText = `Providing ${getBoatBonus(rIdx, cIdx)} Food`;
+                if (isGrain) infoText = `Wild Grain Field\n(Blocks building and lane routing structures)`;
+                else if (terr === 'C') infoText = `Generating ${exploredCount} Gold / 10s\nConsuming 5 Food\nUsing 0 Workforce`;
+                else if (terr === 'T') infoText = `Generating 15 Gold / 10s\nConsuming 5 Food\nUsing 0 Workforce`;
+                else if (state.includes(':House') && terr !== 'FL') infoText = `Providing 5 Workforce\nConsuming 1 Food`;
+                else if (state.includes(':Mine') && terr !== 'FL') infoText = `Generating 15 Gold / 10s\nUsing 4 Workforce`;
+                else if (state.includes(':LumberMill') && terr !== 'FL') infoText = `Generating ${1 + getLumberBonus(rIdx, cIdx)} Wood / 10s\nUsing 2 Workforce`;
+                else if (state.includes(':Quarry') && terr !== 'FL') infoText = `Generating ${1 + getQuarryBonus(rIdx, cIdx)} Stone / 10s\nUsing 3 Workforce`;
+                else if (state.includes(':Farm') && terr !== 'FL') infoText = `Providing ${getFarmBonus(rIdx, cIdx)} Food\nUsing 2 Workforce`;
+                else if (state.includes(':Boat')) infoText = `Providing ${isWaterType(terr) ? getBoatBonus(rIdx, cIdx) : 0} Food\nUsing 1 Workforce`;
                 else if (state.includes(':Road') || state.includes(':Lane')) infoText = `Logistics Route`;
-                else if (state.includes(':Shipyard')) infoText = `Maintains 2 Ships`;
+                else if (state.includes(':Shipyard')) infoText = `Maintains 2 Ships\nUsing 2 Workforce`;
+                else if (state.includes(':Dam')) infoText = `Damming River`;
                 else if (terr === 'PG') infoText = `Provides 10 Workforce Base`;
                 else if (isAlienSlime(rawTerr, state)) infoText = `TOXIC SLIME: -10 Food, -10 Workforce!`;
                 else if (terr === 'FWD') infoText = `Impenetrable Wolf Den`;
-                else if (rawTerr === 'WBF') infoText = `Yields Fish on Tap`;
-                else if (state.includes(':Stocked')) infoText = `Stocked with Fish (+3 Food Capacity)`;
+                else if (rawTerr === 'WBF' && !state.includes(':Looted')) infoText = `Yields Fish on Tap`;
+                else if (state.includes(':Stocked')) infoText = `Stocked with Fish (Yields +1 Food to adjacent boats)`;
+                
+                let hasBuilding = state.includes(':Farm') || state.includes(':LumberMill') || state.includes(':Quarry') || state.includes(':Mine') || state.includes(':House') || state.includes(':Shipyard') || state.includes(':Boat') || state.includes(':Stocked') || terr === 'T' || terr === 'BA';
+                
+                if (hasBuilding && !networkGrid[rIdx][cIdx] && terr !== 'C') {
+                    infoText += `</div><div class="disconnect-warning">⚠️ DISCONNECTED FROM CAPITAL<br>(Production Halted)`;
+                }
             }
-            document.getElementById('ui-income').innerText = infoText;
+            document.getElementById('ui-income').innerHTML = infoText;
 
             const actionsContainer = document.getElementById('ui-actions');
             actionsContainer.innerHTML = '';
 
-            if (!state.startsWith('U')) {
+            let baseStateStr = getBaseStateString(state);
+
+            if (isGrain) {
+                let btn = document.createElement('button');
+                btn.style.backgroundColor = '#d69e2e';
+                let costCls = resources.gold < 100 ? 'req-missing' : '';
+                btn.innerHTML = `Clear Grain Field (<span class="${costCls}">100 Gold</span>)`;
+                btn.disabled = resources.gold < 100;
+                btn.onclick = () => {
+                    resources.gold -= 100;
+                    pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Cleared');
+                };
+                actionsContainer.appendChild(btn);
+            } else if (!state.startsWith('U')) {
                 let cost = 10 + (Math.max(Math.abs(selectedTile.row - capitalPos.row), Math.abs(selectedTile.col - capitalPos.col)) * 2);
                 if ((rawTerr === 'DW' || isAlienSlimeType(rawTerr)) && !state.includes(':Tap1')) cost *= 2; 
                 else if ((rawTerr === 'DW' || isAlienSlimeType(rawTerr)) && state.includes(':Tap1')) cost *= 2;
@@ -1561,92 +1788,40 @@
                 btn.disabled = resources.gold < cost;
                 btn.onclick = (e) => { 
                     resources.gold -= cost; spawnFloatingText(`-${cost} Gold`, e.clientX, e.clientY);
-                    
                     if ((rawTerr === 'DW' || isAlienSlimeType(rawTerr)) && !state.includes(':Tap1')) {
                         pushTileUpdate(selectedTile.row, selectedTile.col, state + ':Tap1');
                     } else {
                         pushTileUpdate(selectedTile.row, selectedTile.col, 'U'); 
-                        if (rawTerr && typeof rawTerr === 'string' && rawTerr.startsWith('WH')) {
-                            showDialogue("Deep Cave Found", "You found a deep cave. Do you go inside?", "Yes", () => {
-                                showInfoModal("Wormhole", "It seems to be some sort of portal that defies logic...");
-                                let pair = getWormholePair(rawTerr, rIdx, cIdx);
-                                if (pair) {
-                                    pushTileUpdate(pair.r + 1, pair.c + 1, 'U');
-                                    selectedTile = { row: pair.r + 1, col: pair.c + 1 };
-                                    snapTo(pair.r + 1, pair.c + 1);
-                                    renderMap(); updateBottomPanel();
-                                }
-                            });
-                        }
-                        if (rawTerr === 'WA') {
-                            showDialogue("Atlantis Found", "You found a great underwater city! Loot for 2000 Gold.", "Claim", () => {
-                                resources.gold += 2000;
-                                updateResourceUI(); pushTileUpdate(selectedTile.row, selectedTile.col, 'U:Looted'); 
-                            });
-                        }
                     }
                 };
                 actionsContainer.appendChild(btn);
             } else {
-                let baseStateStr = getBaseStateString(state);
-                let builtString = state.split(':').find(p => p !== 'U' && p !== 'ExpandedBA' && p !== 'Cleared' && p !== 'Planted' && !p.startsWith('Cap') && !p.startsWith('Q') && !p.startsWith('FH') && !p.startsWith('Bank') && !p.startsWith('Tap') && !p.startsWith('Looted') && !p.startsWith('ClearedSlime') && !p.startsWith('Stocked') && !p.startsWith('Trv'));
+                let builtString = state.split(':').find(p => p !== 'U' && p !== 'ExpandedBA' && p !== 'Cleared' && p !== 'Planted' && !p.startsWith('Cap') && !/^Q\d+$/.test(p) && !p.startsWith('FH') && !p.startsWith('Bank') && !p.startsWith('Tap') && !p.startsWith('Looted') && !p.startsWith('ClearedSlime') && !p.startsWith('Stocked') && !p.startsWith('Trv') && !p.startsWith('Dam') && p !== 'Boat');
                 
-                if (terr === 'MCR' && !state.includes(':Looted')) {
+                if (rawTerr === 'MCR' && !state.includes(':Looted')) {
                     let btn = document.createElement('button'); btn.style.backgroundColor = '#d69e2e'; 
                     btn.innerText = `Loot Ruins (Collect 200 Stone)`;
                     btn.onclick = () => { resources.stone += 200; updateResourceUI(); pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Looted'); };
                     actionsContainer.appendChild(btn);
                 }
-                if (terr === 'RBD' && !state.includes(':Looted')) {
+                if (rawTerr === 'RBD' && !state.includes(':Looted')) {
                     let btn = document.createElement('button'); btn.style.backgroundColor = '#d69e2e'; 
                     btn.innerText = `Clear Dam (Collect 50 Wood)`;
                     btn.onclick = () => { resources.wood += 50; updateResourceUI(); pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Looted'); };
                     actionsContainer.appendChild(btn);
                 }
-                if (terr === 'I' && !state.includes(':Looted')) {
+                if (rawTerr === 'I' && !state.includes(':Looted')) {
                     let btn = document.createElement('button'); btn.style.backgroundColor = '#d69e2e'; 
                     btn.innerText = `Visit Wayside Inn`;
                     btn.onclick = () => { openInnModal(selectedTile.row, selectedTile.col); };
                     actionsContainer.appendChild(btn);
                 }
-                if (isAlienSlime(rawTerr, state)) {
-                    let btn = document.createElement('button'); btn.style.backgroundColor = '#9b2c2c'; 
-                    btn.innerHTML = `Clear Alien Slime (<span class="${resources.gold < 1000 ? 'req-missing' : ''}">1000 Gold</span>)`;
-                    btn.disabled = resources.gold < 1000;
-                    btn.onclick = () => { resources.gold -= 1000; pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':ClearedSlime'); };
-                    actionsContainer.appendChild(btn);
-                }
-
-                if (terr === 'C') {
-                    let capMatch = state.match(/:Cap(\d+)/);
-                    let currentTier = capMatch ? parseInt(capMatch[1]) : 1;
-                    let nextTier = currentTier + 1;
-                    
-                    let woodCost = 200 + ((currentTier - 1) * 100);
-                    let stoneCost = 150 + ((currentTier - 1) * 50); 
-    
-                    let btn = document.createElement('button');
-                    let wCls = resources.wood < woodCost ? 'req-missing' : '';
-                    let sCls = resources.stone < stoneCost ? 'req-missing' : '';
-    
-                    btn.innerHTML = `Upgrade Capital to Tier ${nextTier} (<span class="${wCls}">${woodCost} W</span>, <span class="${sCls}">${stoneCost} S</span>)`;
-                    btn.disabled = resources.wood < woodCost || resources.stone < stoneCost;
-    
-                    btn.onclick = () => { 
-                        resources.wood -= woodCost; resources.stone -= stoneCost; 
-                        pushTileUpdate(selectedTile.row, selectedTile.col, `${state.replace(/:Cap\d+/, '')}:Cap${nextTier}`); 
-                        let unlocks = nextTier === 2 ? "• Shipyards\n• Fishing Boats\n• Shipping Lanes" : "• Gold Mines\n• Forest Clearing\n• Forest Planting";
-                        showDialogue(`Capital Upgraded!`, `Your capital is now Level ${nextTier}!\n\nNew Unlocks:\n${unlocks}`, "Awesome!", () => {});
-                    };
-                    actionsContainer.appendChild(btn);
-                }
 
                 if (!builtString && terr !== 'C') {
+                    let canAttach = canAttachToNetwork(rIdx, cIdx);
+                    let canAttachLane = hasLaneAdjacency(rIdx, cIdx);
                     
-                    let canAttach = hasBuildingAdjacency(selectedTile.row, selectedTile.col);
-                    let canAttachLane = hasLaneAdjacency(selectedTile.row, selectedTile.col);
-                    
-                    if (terr === 'F' && !state.includes(':Planted')) {
+                    if (terr === 'F') {
                         let cost = COSTS.terraform;
                         let btn = document.createElement('button'); btn.style.backgroundColor = '#d69e2e'; 
                         let tierTxt = capitalTier < 3 ? ` <span style="color:#fc8181">(Lvl 3 Cap Req)</span>` : '';
@@ -1655,12 +1830,12 @@
                             btn.disabled = true; btn.title = "Requires Capital Level 3.";
                         } else {
                             btn.disabled = resources.gold < cost; 
-                            btn.onclick = () => { resources.gold -= cost; pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Cleared', 'Cleared'); };
+                            btn.onclick = () => { resources.gold -= cost; pushTileUpdate(selectedTile.row, selectedTile.col, state.replace(/:Planted/g, '').replace(/:Cleared/g, '') + ':Cleared', 'Cleared'); };
                         }
                         actionsContainer.appendChild(btn);
                     }
                     
-                    if ((terr === 'P' || terr === 'FP') && !state.includes(':Cleared') && !isWheatField(rIdx, cIdx)) {
+                    if ((terr === 'P' || terr === 'FP')) {
                         let cost = COSTS.terraform;
                         let btn = document.createElement('button'); btn.style.backgroundColor = '#2f855a'; 
                         let tierTxt = capitalTier < 3 ? ` <span style="color:#fc8181">(Lvl 3 Cap Req)</span>` : '';
@@ -1669,12 +1844,12 @@
                             btn.disabled = true; btn.title = "Requires Capital Level 3.";
                         } else {
                             btn.disabled = resources.gold < cost; 
-                            btn.onclick = () => { resources.gold -= cost; pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Planted', 'Planted'); };
+                            btn.onclick = () => { resources.gold -= cost; pushTileUpdate(selectedTile.row, selectedTile.col, state.replace(/:Cleared/g, '').replace(/:Planted/g, '') + ':Planted', 'Planted'); };
                         }
                         actionsContainer.appendChild(btn);
                     }
                     
-                    if (!isWaterType(terr) && !['FWD', 'WH', 'MCR', 'PG', 'H', 'M', 'I'].includes(terr) && !(terr && typeof terr === 'string' && terr.startsWith('WH')) && !isAlienSlime(rawTerr, state) && !isWheatField(rIdx, cIdx)) {
+                    if (!isWaterType(terr) && !isRiverType(terr) && !['FWD', 'WH', 'MCR', 'PG', 'H', 'M', 'I', 'BA', 'T'].includes(rawTerr) && !isAlienSlime(rawTerr, state)) {
                         createBuildBtn(actionsContainer, 'Build Access Road', 'gold', COSTS.road, 'Road', canAttach, baseStateStr, 0, 0, 'Road', null, 1);
                     }
                     
@@ -1687,33 +1862,55 @@
                         actionsContainer.appendChild(btn);
                     }
 
-                    if (isRiverType(terr) && !isWheatField(rIdx, cIdx) && !state.includes(':Dam')) {
+                    if (isRiverType(terr) && !state.includes(':Dam')) {
                         let canFord = canBuildFord(rIdx, cIdx);
                         createBuildBtn(actionsContainer, 'Build River Ford', 'gold', COSTS.road, 'Road', canFord, baseStateStr, 0, 0, 'Road', null, 1);
-                        if (!canFord) { let p = document.createElement('p'); p.style.color = '#fc8181'; p.style.fontSize = '12px'; p.innerText = "Fords require perpendicular road connection."; actionsContainer.appendChild(p); }
                     }
                     
-                    if (terr === 'W' && rawTerr === 'FP' && !state.includes(':Stocked')) {
+                    if (terr === 'FL' && !state.includes(':Stocked')) {
                         createBuildBtn(actionsContainer, 'Stock Fish (1 🐟)', 'fish', 1, 'Stocked', true, baseStateStr, 0, 0, null, capitalTier < 3 ? "Requires Tier 3 Capital" : null, 3);
                     }
 
-                    if (isWaterType(terr) && terr !== 'R') {
+                    if (isWaterType(terr) && !isRiverType(terr)) {
                         let coastal = isCoastal(rIdx, cIdx);
-                        createBuildBtn(actionsContainer, 'Build Shipyard', 'wood', COSTS.shipyard, 'Shipyard', canAttach && coastal, baseStateStr, WORKFORCE_COSTS.shipyard, 0, null, !coastal ? "Shipyards must touch the coast." : null, 2);
+                        createBuildBtn(actionsContainer, 'Build Shipyard', 'wood', COSTS.shipyard, 'Shipyard', canAttach && coastal, baseStateStr, WORKFORCE_COSTS.Shipyard, 0, null, !coastal ? "Shipyards must touch the coast." : null, 2);
                         createBuildBtn(actionsContainer, 'Establish Shipping Lane', 'gold', COSTS.lane, 'Lane', canAttachLane, baseStateStr, 0, 0, 'Lane', null, 2);
                         
-                        let globalBoatCap = shipyardCount * 2;
-                        createBuildBtn(actionsContainer, 'Build Fishing Boat', 'wood', COSTS.boat, 'Boat', true, baseStateStr, WORKFORCE_COSTS.boat, 0, null, (boatCount >= globalBoatCap) ? "Requires more Shipyards." : null, 2);
+                        if ((resources.storedBoats || 0) > 0) {
+                            let btn = document.createElement('button');
+                            btn.style.backgroundColor = '#3182ce';
+                            btn.innerHTML = `Deploy Stored Boat (1 ⛵) | <span class="${workforce.used + WORKFORCE_COSTS.Boat > workforce.max ? 'req-missing' : ''}">-${WORKFORCE_COSTS.Boat} WF</span>`;
+                            btn.disabled = workforce.used + WORKFORCE_COSTS.Boat > workforce.max;
+                            btn.onclick = () => {
+                                resources.storedBoats--;
+                                pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Boat', 'Boat');
+                            };
+                            actionsContainer.appendChild(btn);
+                        } else {
+                            let globalBoatCap = (tracker.built['Shipyard'] || 0) * 2;
+                            createBuildBtn(actionsContainer, 'Build Fishing Boat', 'wood', COSTS.boat, 'Boat', true, baseStateStr, WORKFORCE_COSTS.Boat, 0, null, ((tracker.built['Boat'] || 0) >= globalBoatCap) ? "Requires more Shipyards." : null, 2);
+                        }
                     }
                     
                     if (terr === 'BA') createBuildBtn(actionsContainer, 'Erect Tenement House', 'wood', COSTS.house, 'House', canAttach, baseStateStr, 0, 1, null, null, 1);
-                    if ((terr === 'P' || terr === 'FP') && !isWheatField(rIdx, cIdx)) {
-                        createBuildBtn(actionsContainer, 'Construct Lumber Mill', 'wood', COSTS.lumbermill, 'LumberMill', canAttach, baseStateStr, WORKFORCE_COSTS.lumbermill, 0, null, null, 1);
-                        createBuildBtn(actionsContainer, 'Build Wheat Farm', 'wood', COSTS.farm, 'Farm', canAttach, baseStateStr, WORKFORCE_COSTS.farm, 0, null, null, 1);
+                    if ((terr === 'P' || terr === 'FP')) {
+                        createBuildBtn(actionsContainer, 'Construct Lumber Mill', 'wood', COSTS.lumbermill, 'LumberMill', canAttach, baseStateStr, WORKFORCE_COSTS.LumberMill, 0, null, null, 1);
+                        createBuildBtn(actionsContainer, 'Build Wheat Farm', 'wood', COSTS.farm, 'Farm', canAttach, baseStateStr, WORKFORCE_COSTS.Farm, 0, null, null, 1);
                     }
-                    if (terr === 'M' || terr === 'H') createBuildBtn(actionsContainer, 'Establish Stone Quarry', 'stone', COSTS.quarry, 'Quarry', canAttach, baseStateStr, WORKFORCE_COSTS.quarry, 0, null, null, 1);
-                    if (terr === 'G') createBuildBtn(actionsContainer, 'Establish Gold Mine', 'wood', COSTS.goldmine, 'Mine', canAttach, baseStateStr, WORKFORCE_COSTS.mine, 0, null, null, 3);
+                    if (terr === 'M' || terr === 'H') createBuildBtn(actionsContainer, 'Establish Stone Quarry', 'stone', COSTS.quarry, 'Quarry', canAttach, baseStateStr, WORKFORCE_COSTS.Quarry, 0, null, null, 1);
+                    if (terr === 'G') createBuildBtn(actionsContainer, 'Establish Gold Mine', 'wood', COSTS.goldmine, 'Mine', canAttach, baseStateStr, WORKFORCE_COSTS.Mine, 0, null, null, 3);
                     
+                }
+                
+                if (state.includes(':Boat')) {
+                    let btn = document.createElement('button');
+                    btn.style.backgroundColor = '#d69e2e';
+                    btn.innerText = `Stow Boat to Inventory`;
+                    btn.onclick = () => {
+                        resources.storedBoats = (resources.storedBoats || 0) + 1;
+                        pushTileUpdate(selectedTile.row, selectedTile.col, state.replace(/:Boat/g, ''));
+                    };
+                    actionsContainer.appendChild(btn);
                 } else if (builtString && !state.includes(':Dam')) {
                     let btn = document.createElement('button');
                     btn.className = 'danger-btn modal-btn'; btn.innerText = "Demolish Structures";
@@ -1741,7 +1938,7 @@
             if (capitalTier < reqTier) { btn.disabled = true; btn.title = `Requires Capital Level ${reqTier}`; } 
             else if (customBlockMsg) { btn.disabled = true; btn.title = customBlockMsg; } 
             else if (!reqMet) { btn.disabled = true; btn.title = "Requires network adjacency."; } 
-            else if (workforce.used + wfCost > workforce.max) { btn.disabled = true; btn.title = "Insufficient Workforce capacity."; } 
+            else if (wfCost > 0 && workforce.used + wfCost > workforce.max) { btn.disabled = true; btn.title = "Insufficient Workforce capacity."; } 
             else if (foodCost > 0 && food.max - food.used < foodCost) { btn.disabled = true; btn.title = "Insufficient Food capacity."; } 
             else { btn.disabled = resources[resType] < actualCost; }
             
@@ -1755,27 +1952,40 @@
         function gameTick() {
             if (!currentUser) return;
             
-            breakdown.goldMines = 0; breakdown.woodMills = 0; breakdown.stoneQuarries = 0;
-            breakdown.goldBase = exploredCount; breakdown.goldTowns = connectedTownsCount * 15;
+            breakdown.goldBase = tracker.explored || 0; 
+            breakdown.goldTowns = connectedTownsCount * 15;
             
-            if (hiredTravellers.includes('MR')) breakdown.goldTowns += connectedTownsCount * 10; // Merchant Buff
+            if (hiredTravellers.includes('MR')) breakdown.goldTowns += connectedTownsCount * 10; 
             
-            incomes = { gold: breakdown.goldBase + breakdown.goldTowns, wood: breakdown.woodBase, stone: 0 };
+            incomes = { gold: breakdown.goldBase + breakdown.goldTowns, wood: 0, stone: 0 };
+            
+            let woodMillsBonus = 0; let stoneQuarryBonus = 0;
+            let currentMines = 0;
             
             for (let r = 0; r < GRID_UNITS; r++) {
                 for (let c = 0; c < GRID_UNITS; c++) {
                     let state = stateGrid[r][c];
-                    if (state && state.startsWith('U')) {
-                        if (state.includes(':Mine')) { incomes.gold += 15; breakdown.goldMines += 15; }
+                    let rawTerr = mapGrid[r][c];
+                    let terr = getEffectiveTerrain(rawTerr, state, r, c);
+                    
+                    // IMPORTANT: Only grant resources if connected to the Capital and NOT flooded!
+                    if (state && state.startsWith('U') && networkGrid[r][c] && terr !== 'FL') {
+                        if (state.includes(':Mine')) { currentMines += 15; }
                         if (state.includes(':LumberMill')) { 
                             let fb = 1 + getLumberBonus(r, c); 
-                            if (hiredTravellers.includes('WM')) fb += 1; // Woodsman Buff
-                            incomes.wood += fb; breakdown.woodMills += fb; 
+                            if (hiredTravellers.includes('WM')) fb += 1; 
+                            woodMillsBonus += fb;
                         }
-                        if (state.includes(':Quarry')) { let qb = 1 + getQuarryBonus(r, c); incomes.stone += qb; breakdown.stoneQuarries += qb; }
+                        if (state.includes(':Quarry')) { 
+                            stoneQuarryBonus += 1 + getQuarryBonus(r, c);
+                        }
                     }
                 }
             }
+            
+            incomes.gold += currentMines; breakdown.goldMines = currentMines;
+            incomes.wood += woodMillsBonus; breakdown.woodMills = woodMillsBonus;
+            incomes.stone += stoneQuarryBonus; breakdown.stoneQuarries = stoneQuarryBonus;
 
             if (resources.gold < globalGoldCap) resources.gold = Math.min(globalGoldCap, resources.gold + incomes.gold);
             if (resources.wood < globalStorageCap) resources.wood = Math.min(globalStorageCap, resources.wood + incomes.wood);
