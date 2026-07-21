@@ -67,6 +67,11 @@
         
         .float-text { position: absolute; pointer-events: none; font-weight: bold; font-size: 16px; z-index: 1000; animation: floatUp 1.2s ease-out forwards; text-shadow: 1px 1px 2px #000; }
         @keyframes floatUp { 0% { opacity: 1; transform: translateY(0px) scale(1); } 100% { opacity: 0; transform: translateY(-40px) scale(1.1); } }
+
+        .zoom-controls { position: absolute; top: 15px; left: 15px; display: flex; flex-direction: column; gap: 8px; z-index: 50; }
+        .zoom-btn { width: 40px; height: 40px; border-radius: 8px; background: #2d2d3d; border: 2px solid #4a5568; color: white; font-size: 24px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 8px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; touch-action: none; transition: background-color 0.2s; }
+        .zoom-btn:hover { background-color: #3b3b4f; }
+        .zoom-btn:active { transform: scale(0.9); }
     </style>
 </head>
 <body>
@@ -185,6 +190,11 @@
     </header>
 
     <div class="main-container">
+        <div class="zoom-controls">
+            <button class="zoom-btn" onclick="setZoom(currentZoom * 1.25)">+</button>
+            <button class="zoom-btn" onclick="setZoom(currentZoom / 1.25)">−</button>
+        </div>
+        
         <div class="fab-container">
             <div class="fab" id="fab-quest" onclick="openModal('quest-modal'); updateQuestUI();">📖</div>
             <div class="mini-counter" id="quest-mini-counter">0/0</div>
@@ -276,6 +286,30 @@
         let ptrStartY = 0;
         let isPointerDown = false;
         let panStartX = 0, panStartY = 0, scrollStartLeft = 0, scrollStartTop = 0;
+
+        window.setZoom = function(newZoom, focalX, focalY) {
+            let oldZoom = currentZoom;
+            newZoom = Math.min(Math.max(0.3, newZoom), 2.0);
+            if (oldZoom === newZoom) return;
+
+            let sc = document.getElementById('map-scroll-container');
+            // If no focal point is provided (e.g. hitting the +/- buttons), zoom to the center of the screen
+            if (focalX === undefined) focalX = sc.clientWidth / 2;
+            if (focalY === undefined) focalY = sc.clientHeight / 2;
+
+            // Pinpoint exactly where the user is looking on the giant canvas
+            let canvasX = (sc.scrollLeft + focalX) / oldZoom;
+            let canvasY = (sc.scrollTop + focalY) / oldZoom;
+
+            currentZoom = newZoom;
+            let cvs = document.getElementById('gameCanvas');
+            cvs.style.width = `${4000 * currentZoom}px`;
+            cvs.style.height = `${4000 * currentZoom}px`;
+
+            // Adjust the scrollbars so that exact point stays under their cursor/fingers
+            sc.scrollLeft = (canvasX * currentZoom) - focalX;
+            sc.scrollTop = (canvasY * currentZoom) - focalY;
+        };
 
         const COSTS = { 
             road: 15, lane: 20, house: 50, lumbermill: 40, 
@@ -451,9 +485,30 @@
             scrollContainer.addEventListener('pointercancel', releasePointer);
             scrollContainer.addEventListener('pointerleave', releasePointer);
 
+            let pinchCenter = {x: 0, y: 0};
+            
+            // 1. Desktop Trackpad & Mouse Wheel Zoom
+            scrollContainer.addEventListener('wheel', (e) => {
+                if (e.ctrlKey) { // Detects trackpad pinch or Ctrl+MouseWheel
+                    e.preventDefault();
+                    let rect = scrollContainer.getBoundingClientRect();
+                    let focalX = e.clientX - rect.left;
+                    let focalY = e.clientY - rect.top;
+                    let zoomChange = e.deltaY > 0 ? 0.95 : 1.05; // Smooth incremental scaling
+                    setZoom(currentZoom * zoomChange, focalX, focalY);
+                }
+            }, {passive: false});
+
+            // 2. Mobile Touch Pinch
             scrollContainer.addEventListener('touchstart', (e) => {
                 if (e.touches.length === 2) {
                     initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                    let rect = scrollContainer.getBoundingClientRect();
+                    // Lock onto the exact center point between the user's two fingers
+                    pinchCenter = {
+                        x: ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left,
+                        y: ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top
+                    };
                 }
             });
 
@@ -462,12 +517,10 @@
                     e.preventDefault(); 
                     let newDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                     let zoomChange = newDist / initialPinchDist;
-                    currentZoom = Math.min(Math.max(0.3, currentZoom * zoomChange), 2.0);
-                    canvas.style.width = `${4000 * currentZoom}px`;
-                    canvas.style.height = `${4000 * currentZoom}px`;
+                    setZoom(currentZoom * zoomChange, pinchCenter.x, pinchCenter.y);
                     initialPinchDist = newDist; 
                 }
-            });
+            }, {passive: false});
 
             scrollContainer.addEventListener('touchend', (e) => {
                 if (e.touches.length < 2) initialPinchDist = null;
@@ -825,20 +878,38 @@
         }
 
         window.openInnModal = function(r, c) {
-            let available = Object.keys(TRAVELLERS).filter(k => !hiredTravellers.includes(k));
-            available.sort(() => 0.5 - Math.random());
+            let rawTerr = mapGrid[r-1][c-1] || 'I';
+            let available = [];
+            
+            // Check if the Google Sheet provided specific heroes (e.g. I:WM,SP,CL)
+            if (rawTerr.includes(':')) {
+                let parts = rawTerr.split(':');
+                if (parts[1]) {
+                    let specificHeroes = parts[1].split(',');
+                    available = specificHeroes.filter(k => !hiredTravellers.includes(k));
+                }
+            } else {
+                // If it's just 'I', default to the old random shuffle
+                available = Object.keys(TRAVELLERS).filter(k => !hiredTravellers.includes(k));
+                available.sort(() => 0.5 - Math.random());
+            }
+            
             let choices = available.slice(0, 3);
             
             let html = '';
             if (choices.length === 0) {
-                html = '<p style="color:#a0aec0;">The inn is empty. All heroes have been hired!</p>';
+                html = '<p style="color:#a0aec0;">The inn is empty. All heroes here have been hired!</p>';
             } else {
                 choices.forEach(key => {
                     let t = TRAVELLERS[key];
-                    html += `<button class="modal-btn" style="background-color:#4c51bf; text-align:left; font-size:14px; padding:15px;" onclick="hireTraveller('${key}', ${r}, ${c})">
-                                <span style="font-size:20px;">${t.icon}</span> <b style="color:white;">${t.name}</b><br>
-                                <span style="font-size:12px; font-weight:normal; color:#e2e8f0;">${t.desc}</span>
-                             </button>`;
+                    if (!t) {
+                        html += `<p style="color:#fc8181; font-size:12px; margin-bottom:10px;">Error: Unknown hero code '${key}' in sheets.</p>`;
+                    } else {
+                        html += `<button class="modal-btn" style="background-color:#4c51bf; text-align:left; font-size:14px; padding:15px;" onclick="hireTraveller('${key}', ${r}, ${c})">
+                                    <span style="font-size:20px;">${t.icon}</span> <b style="color:white;">${t.name}</b><br>
+                                    <span style="font-size:12px; font-weight:normal; color:#e2e8f0;">${t.desc}</span>
+                                 </button>`;
+                    }
                 });
             }
             document.getElementById('inn-choices').innerHTML = html;
@@ -863,6 +934,8 @@
         }
 
         function getEffectiveTerrain(rawTerr, st, rIdx, cIdx) {
+            if (typeof rawTerr === 'string' && rawTerr.includes(':')) rawTerr = rawTerr.split(':')[0];
+            
             if (!st) return rawTerr || 'P';
             
             if (st.includes(':ClearedSlime')) {
@@ -1899,7 +1972,7 @@
                     btn.onclick = () => { resources.wood += 50; updateResourceUI(); pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Looted'); };
                     actionsContainer.appendChild(btn);
                 }
-                if (rawTerr === 'I' && !state.includes(':Looted')) {
+                if (rawTerr && rawTerr.startsWith('I') && !state.includes(':Looted')) {
                     let btn = document.createElement('button'); btn.style.backgroundColor = '#d69e2e'; 
                     btn.innerText = `Visit Wayside Inn`;
                     btn.onclick = () => { openInnModal(selectedTile.row, selectedTile.col); };
