@@ -383,10 +383,7 @@
                 isComplete: () => (tracker.built['Quarry'] || 0) >= 1,
                 progress: () => `${Math.min(tracker.built['Quarry'] || 0, 1)}/1 Stone Quarry`, 
                 shortProgress: () => `${Math.min(tracker.built['Quarry'] || 0, 1)}/1`,
-                claim: () => { 
-                    resources.wood += 100; resources.stone += 100; 
-                    updateCapitalData(6, 0); 
-                }
+                claim: () => { resources.wood += 100; resources.stone += 100; updateCapitalData(6, 0); }
             },
             {
                 narrative: "Your automated passive income is helpful, but sometimes a kingdom requires a commander's direct touch.",
@@ -416,67 +413,103 @@
                 claim: () => { resources.wood += 250; updateCapitalData(9, 0); }
             },
             {
-                narrative: "Our humble center of governance is no longer sufficient. It is time to expand the palace.",
-                goal: "Upgrade the Capital to Level 2 (Select the Capital tile to access upgrades).",
-                reward: "500 Gold",
-                isComplete: () => capitalTier >= 2,
-                progress: () => `Tier ${capitalTier}/2`,
-                shortProgress: () => `Lv ${capitalTier}/2`,
-                claim: () => { resources.gold += 500; updateCapitalData(10, 0); }
-            },
-            {
-                narrative: "The seas call to us. We need ships to harvest the bounties of the deep.",
-                goal: "Build a Shipyard (Tip: Shipyards must touch the coast. They allow you to build Shipping Lanes, which act exactly like roads on water!)",
-                reward: "100 Wood",
-                isComplete: () => (tracker.built['Shipyard'] || 0) >= 1,
-                progress: () => `${Math.min(tracker.built['Shipyard'] || 0, 1)}/1 Shipyard`,
-                shortProgress: () => `${Math.min(tracker.built['Shipyard'] || 0, 1)}/1`,
-                claim: () => { resources.wood += 100; updateCapitalData(11, 0); }
-            },
-            {
                 narrative: "To run an empire, we must manage a sprawling population. If food runs out, you cannot feed more workers.",
                 goal: "Have a max Workforce capacity of 40. (Tip: If Food and Workforce run out simultaneously, you can 'Demolish' an industrial building to regain the workforce needed to build a Farm.)",
                 reward: "500 Gold + 100 Stone",
                 isComplete: () => workforce.max >= 40,
                 progress: () => `${Math.min(workforce.max, 40)}/40 Max Workforce`,
                 shortProgress: () => `${Math.min(workforce.max, 40)}/40`,
-                claim: () => { resources.gold += 500; resources.stone += 100; updateCapitalData(12, 0); }
+                claim: () => { resources.gold += 500; resources.stone += 100; updateCapitalData(10, 0); }
+            },
+            {
+                narrative: "Our humble center of governance is no longer sufficient. It is time to expand the palace.",
+                goal: "Upgrade the Capital to Level 2 (Select the Capital tile to access upgrades).",
+                reward: "500 Gold",
+                isComplete: () => capitalTier >= 2,
+                progress: () => `Tier ${capitalTier}/2`,
+                shortProgress: () => `Lv ${capitalTier}/2`,
+                claim: () => { resources.gold += 500; updateCapitalData(11, 0); }
+            },
+            {
+                narrative: "To cross the mighty rivers dividing our land, we require superior engineering.",
+                goal: "Upgrade the Capital to Level 3 (Unlocks River Fords and Forestry).",
+                reward: "1000 Wood",
+                isComplete: () => capitalTier >= 3,
+                progress: () => `Tier ${capitalTier}/3`,
+                shortProgress: () => `Lv ${capitalTier}/3`,
+                claim: () => { resources.wood += 1000; updateCapitalData(12, 0); }
+            },
+            {
+                narrative: "With advanced infrastructure, we can extract pure wealth from the earth.",
+                goal: "Build 3 Gold Mines on Gold Veins.",
+                reward: "2000 Gold",
+                isComplete: () => (tracker.built['Mine'] || 0) >= 3,
+                progress: () => `${Math.min(tracker.built['Mine'] || 0, 3)}/3 Mines`,
+                shortProgress: () => `${Math.min(tracker.built['Mine'] || 0, 3)}/3`,
+                claim: () => { resources.gold += 2000; updateCapitalData(13, 0); }
+            },
+            {
+                narrative: "The land is becoming barren. We must give back to nature to sustain our lumber industry.",
+                goal: "Plant 4 Forests on Plains or Flood Plains.",
+                reward: "400 Stone",
+                isComplete: () => (tracker.tags['Planted'] || 0) >= 4,
+                progress: () => `${Math.min(tracker.tags['Planted'] || 0, 4)}/4 Forests Planted`,
+                shortProgress: () => `${Math.min(tracker.tags['Planted'] || 0, 4)}/4`,
+                claim: () => { resources.stone += 400; updateCapitalData(14, 0); }
+            },
+            {
+                narrative: "Our population booms. We must clear land for expansion and double down on agriculture.",
+                goal: "Clear 3 wild Forests AND reach a maximum Food capacity of 50.",
+                reward: "1500 Gold",
+                isComplete: () => (tracker.tags['Cleared'] || 0) >= 3 && food.max >= 50,
+                progress: () => `Cleared: ${Math.min(tracker.tags['Cleared'] || 0, 3)}/3 | Food: ${Math.min(food.max, 50)}/50`,
+                shortProgress: () => (tracker.tags['Cleared'] || 0) >= 3 && food.max >= 50 ? "Done" : "Tracking",
+                claim: () => { resources.gold += 1500; updateCapitalData(15, 0); }
+            },
+            {
+                narrative: "We are pushing against the edges of the continent. The palace must reflect our dominion.",
+                goal: "Upgrade the Capital to Level 4.",
+                reward: "2000 Wood",
+                isComplete: () => capitalTier >= 4,
+                progress: () => `Tier ${capitalTier}/4`,
+                shortProgress: () => `Lv ${capitalTier}/4`,
+                claim: () => { resources.wood += 2000; updateCapitalData(16, 0); }
+            },
+            {
+                narrative: "To conquer the seas, we need the greatest stronghold the world has ever seen.",
+                goal: "Upgrade the Capital to Level 5 (Unlocks Naval Technologies).",
+                reward: "3000 Gold",
+                isComplete: () => capitalTier >= 5,
+                progress: () => `Tier ${capitalTier}/5`,
+                shortProgress: () => `Lv ${capitalTier}/5`,
+                claim: () => { resources.gold += 3000; updateCapitalData(17, 0); }
+            },
+            {
+                narrative: "The seas call to us. We need ships to harvest the bounties of the deep.",
+                goal: "Build a Shipyard (Tip: Shipyards must touch the coast. They allow you to build Shipping Lanes, which act exactly like roads on water!)",
+                reward: "500 Wood",
+                isComplete: () => (tracker.built['Shipyard'] || 0) >= 1,
+                progress: () => `${Math.min(tracker.built['Shipyard'] || 0, 1)}/1 Shipyard`,
+                shortProgress: () => `${Math.min(tracker.built['Shipyard'] || 0, 1)}/1`,
+                claim: () => { resources.wood += 500; updateCapitalData(18, 0); }
             },
             {
                 narrative: "A true maritime power commands a vast fleet. Deploy vessels to feed the masses.",
                 goal: "Deploy 4 Fishing Boats. (Tip: Boats must be placed on water connected to a Shipyard via Shipping Lanes.)",
-                reward: "300 Wood",
+                reward: "500 Stone",
                 isComplete: () => (tracker.built['Boat'] || 0) >= 4,
                 progress: () => `${Math.min(tracker.built['Boat'] || 0, 4)}/4 Boats`,
                 shortProgress: () => `${Math.min(tracker.built['Boat'] || 0, 4)}/4`,
-                claim: () => { resources.wood += 300; updateCapitalData(13, 0); }
+                claim: () => { resources.stone += 500; updateCapitalData(19, 0); }
             },
             {
                 narrative: "Legend speaks of a sunken city possessing untold wealth. Search the deep waters.",
                 goal: "Find and loot the Sunken City of Atlantis.",
-                reward: "1000 Gold",
+                reward: "5000 Gold",
                 isComplete: () => hasFoundAtlantis,
                 progress: () => hasFoundAtlantis ? "Atlantis Looted" : "Searching...",
                 shortProgress: () => hasFoundAtlantis ? "1/1" : "0/1",
-                claim: () => { resources.gold += 1000; updateCapitalData(14, 0); }
-            },
-            {
-                narrative: "Our empire spans the horizon. To fund the most advanced industries, the palace must become a monument to our glory.",
-                goal: "Upgrade the Capital to Level 3.",
-                reward: "1000 Wood + 1000 Stone",
-                isComplete: () => capitalTier >= 3,
-                progress: () => `Tier ${capitalTier}/3`,
-                shortProgress: () => `Lv ${capitalTier}/3`,
-                claim: () => { resources.wood += 1000; resources.stone += 1000; updateCapitalData(15, 0); }
-            },
-            {
-                narrative: "With a Level 3 Capital, we can extract pure wealth from the earth.",
-                goal: "Build 3 Gold Mines on Gold Veins.",
-                reward: "10000 Gold",
-                isComplete: () => (tracker.built['Mine'] || 0) >= 3,
-                progress: () => `${Math.min(tracker.built['Mine'] || 0, 3)}/3 Mines`,
-                shortProgress: () => `${Math.min(tracker.built['Mine'] || 0, 3)}/3`,
-                claim: () => { resources.gold += 10000; updateCapitalData(16, 0); }
+                claim: () => { resources.gold += 5000; updateCapitalData(20, 0); }
             }
         ];
 
@@ -1542,7 +1575,7 @@
             quarryCount = tracker.built['Quarry'] || 0;
             tenementHouseCount = tracker.built['House'] || 0;
 
-            globalStorageCap = 200 + ((capitalTier - 1) * 100);
+            globalStorageCap = 200 + ((capitalTier - 1) * 400);
             globalGoldCap = (capitalTier * 1000) + (discoveredTownsCount * 100);
         }
 
@@ -1668,6 +1701,24 @@
                             }
                         }
 
+                        } else {
+                        ctx.fillStyle = TERRAIN_STYLES['H_FOG'].color;
+                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                        ctx.strokeStyle = '#232330';
+                        ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
+                    }
+                    
+                    // RENDER THE TREASURE MAP STAR IN THE FOG
+                    if (!isUncovered && state.includes(':Treasure')) {
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = "18px sans-serif";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText('🌟', x + TILE_SIZE/2, y + TILE_SIZE/2);
+                    }
+
+                    if (selectedTile && selectedTile.row === r + 1 && selectedTile.col === c + 1) {
+
                         if (state.includes(':House') && effTerr !== 'FL') ctx.fillText('🏡', x + TILE_SIZE/2, y + TILE_SIZE/2);
                         if (state.includes(':LumberMill') && effTerr !== 'FL') ctx.fillText('🪵', x + TILE_SIZE/2, y + TILE_SIZE/2);
                         if (state.includes(':Quarry') && effTerr !== 'FL') ctx.fillText('⛏️', x + TILE_SIZE/2, y + TILE_SIZE/2);
@@ -1743,7 +1794,7 @@
                 let rIdx = row - 1; let cIdx = col - 1;
                 let effTerr = getEffectiveTerrain(rawTerr, state, rIdx, cIdx);
                 
-                if (quickBuildActive && activeQbType && lastAnchorTile) {
+                if (quickBuildActive && activeQbType && lastAnchorTile && !state.startsWith('U')) {
                     let isLine = (lastAnchorTile.r === rIdx || lastAnchorTile.c === cIdx);
                     let path = []; let valid = true;
                     
@@ -1778,7 +1829,7 @@
                         if (actionKey === 'Road') {
                             if (capitalTier < 1 || ['M','H','W','DW','WF','WBF','WA','FL','L','T','C','BA','FWD','MCR','PG','I'].includes(ptTerr) || (ptTerr && typeof ptTerr === 'string' && ptTerr.startsWith('WH')) || isWheatField(pt.r, pt.c) || isAlienSlime(mapGrid[pt.r][pt.c], ptSt) || (ptTerr === 'R' && !canBuildFord(pt.r, pt.c))) valid = false;
                         } else if (actionKey === 'Lane') {
-                            if (capitalTier < 2 || (!['W','WF','WBF','DW','WA','FL','L'].includes(ptTerr))) valid = false;
+                            if (capitalTier < 5 || (!['W','WF','WBF','DW','WA','FL','L'].includes(ptTerr))) valid = false;
                         } else if (actionKey === 'Cleared') {
                             if (capitalTier < 3 || ptTerr !== 'F' || ptSt.includes(':Planted')) valid = false;
                         } else if (actionKey === 'Planted') {
@@ -1998,6 +2049,26 @@
             
             return { allowed: false, reason: "Local Shipyards are at max capacity (2 Boats each)." };
         }
+
+        function spawnTreasureMap(startR, startC) {
+            let candidates = [];
+            for (let r = 0; r < GRID_UNITS; r++) {
+                for (let c = 0; c < GRID_UNITS; c++) {
+                    let st = stateGrid[r][c] || 'H';
+                    // Must be unrevealed fog and not already have a treasure
+                    if (!st.startsWith('U') && !st.includes(':Treasure')) {
+                        let dist = Math.max(Math.abs(r - startR), Math.abs(c - startC));
+                        if (dist >= 5 && dist <= 10) candidates.push({r, c});
+                    }
+                }
+            }
+            if (candidates.length > 0) {
+                let choice = candidates[Math.floor(Math.random() * candidates.length)];
+                stateGrid[choice.r][choice.c] += ':Treasure';
+                updateQueue.push({row: choice.r + 1, col: choice.c + 1, value: stateGrid[choice.r][choice.c], user: currentUser});
+                processUpdateQueue();
+            }
+        }
         
         function updateBottomPanel() {
             if (!selectedTile) return;
@@ -2070,12 +2141,33 @@
                 btn.disabled = resources.gold < cost;
                 btn.onclick = (e) => { 
                     resources.gold -= cost; spawnFloatingText(`-${cost} Gold`, e.clientX, e.clientY);
+                    
                     if ((rawTerr === 'DW' || isAlienSlimeType(rawTerr)) && !state.includes(':Tap1')) {
                         pushTileUpdate(selectedTile.row, selectedTile.col, state + ':Tap1');
                     } else {
+                        // Treasure Collection
+                        if (state.includes(':Treasure')) {
+                            let resTypes = ['gold', 'wood', 'stone'];
+                            let caps = { gold: globalGoldCap, wood: globalStorageCap, stone: globalStorageCap };
+                            let picked = resTypes[Math.floor(Math.random() * resTypes.length)];
+                            let perc = (Math.floor(Math.random() * 6) + 5) / 100; // 5% to 10%
+                            let amt = Math.floor(caps[picked] * perc);
+                            resources[picked] += amt;
+                            spawnFloatingText(`+${amt} ${picked.charAt(0).toUpperCase() + picked.slice(1)} (Treasure!)`, e.clientX, e.clientY + 20, '#f1c40f');
+                            updateResourceUI();
+                            state = state.replace(/:Treasure/g, ''); 
+                        }
+                        
+                        // Spawn a new map? (5% chance)
+                        if (Math.random() < 0.05) {
+                            spawnFloatingText("Treasure Map Found! 🌟", e.clientX, e.clientY - 20, '#f1c40f');
+                            spawnTreasureMap(selectedTile.row - 1, selectedTile.col - 1);
+                        }
+                        
                         pushTileUpdate(selectedTile.row, selectedTile.col, 'U'); 
                     }
                 };
+                
                 actionsContainer.appendChild(btn);
             } else {
                 let builtString = state.split(':').find(p => p !== 'U' && p !== 'ExpandedBA' && p !== 'Cleared' && p !== 'Planted' && !p.startsWith('Cap') && !/^Q\d+$/.test(p) && !p.startsWith('FH') && !p.startsWith('Bank') && !p.startsWith('Tap') && !p.startsWith('Looted') && !p.startsWith('ClearedSlime') && !p.startsWith('Stocked') && !p.startsWith('Trv') && !p.startsWith('Dam') && p !== 'Boat');
@@ -2107,10 +2199,16 @@
 
                 if (terr === 'C') {
                     let nextTier = capitalTier + 1;
-                    if (nextTier <= 3) {
-                        let gCost = nextTier === 2 ? 500 : 2000;
-                        let wCost = nextTier === 2 ? 200 : 600;
-                        let sCost = nextTier === 2 ? 100 : 300;
+                    if (nextTier <= 5) {
+                        let costs = {
+                            2: {g: 500, w: 200, s: 100},
+                            3: {g: 2000, w: 600, s: 300},
+                            4: {g: 5000, w: 1000, s: 500},
+                            5: {g: 10000, w: 1400, s: 700}
+                        };
+                        let gCost = costs[nextTier].g;
+                        let wCost = costs[nextTier].w;
+                        let sCost = costs[nextTier].s;
                         
                         let btn = document.createElement('button');
                         btn.style.backgroundColor = '#805ad5';
@@ -2134,7 +2232,7 @@
                     } else {
                         let btn = document.createElement('button');
                         btn.style.backgroundColor = '#4a5568';
-                        btn.innerText = `Capital at Maximum Level (3)`;
+                        btn.innerText = `Capital at Maximum Level (5)`;
                         btn.disabled = true;
                         actionsContainer.appendChild(btn);
                     }
@@ -2196,20 +2294,20 @@
 
                     if (isRiverType(terr) && !state.includes(':Dam')) {
                         let canFord = canBuildFord(rIdx, cIdx);
-                        createBuildBtn(actionsContainer, 'Build River Ford', 'gold', COSTS.road, 'Road', canFord, baseStateStr, 0, 0, 'Road', null, 1);
+                        createBuildBtn(actionsContainer, 'Build River Ford', 'gold', COSTS.road, 'Road', canFord, baseStateStr, 0, 0, 'Road', capitalTier < 3 ? "Requires Tier 3 Capital" : null, 3);
                     }
                     
                     if (terr === 'FL' && !state.includes(':Stocked')) {
-                        createBuildBtn(actionsContainer, 'Stock Fish (1 🐟)', 'fish', 1, 'Stocked', true, baseStateStr, 0, 0, null, capitalTier < 3 ? "Requires Tier 3 Capital" : null, 3);
+                        createBuildBtn(actionsContainer, 'Stock Fish (1 🐟)', 'fish', 1, 'Stocked', true, baseStateStr, 0, 0, null, capitalTier < 5 ? "Requires Tier 5 Capital" : null, 5);
                     }
 
                     if (isWaterType(terr) && !isRiverType(terr)) {
                         let coastal = isCoastal(rIdx, cIdx);
                         // Only render the Shipyard button if it is a coastal tile
                         if (coastal) {
-                            createBuildBtn(actionsContainer, 'Build Shipyard', 'wood', COSTS.shipyard, 'Shipyard', canAttach, baseStateStr, WORKFORCE_COSTS.Shipyard, 0, null, null, 2);
+                            createBuildBtn(actionsContainer, 'Build Shipyard', 'wood', COSTS.shipyard, 'Shipyard', canAttach, baseStateStr, WORKFORCE_COSTS.Shipyard, 0, null, null, 5);
                         }
-                        createBuildBtn(actionsContainer, 'Establish Shipping Lane', 'gold', COSTS.lane, 'Lane', canAttachLane, baseStateStr, 0, 0, 'Lane', null, 2);
+                        createBuildBtn(actionsContainer, 'Establish Shipping Lane', 'gold', COSTS.lane, 'Lane', canAttachLane, baseStateStr, 0, 0, 'Lane', null, 5);
                         
                         let boatCheck = checkBoatPlacement(rIdx, cIdx);
                         
@@ -2234,7 +2332,7 @@
                             actionsContainer.appendChild(btn);
                         } else if (!state.includes(':Boat')) {
                             // Apply strict validations to building new boats
-                            createBuildBtn(actionsContainer, 'Build Fishing Boat', 'wood', COSTS.boat, 'Boat', true, baseStateStr, WORKFORCE_COSTS.Boat, 0, null, !boatCheck.allowed ? boatCheck.reason : null, 2);
+                            createBuildBtn(actionsContainer, 'Build Fishing Boat', 'wood', COSTS.boat, 'Boat', true, baseStateStr, WORKFORCE_COSTS.Boat, 0, null, !boatCheck.allowed ? boatCheck.reason : null, 5);
                         }
                     }
                     
