@@ -342,7 +342,7 @@
             },
             {
                 narrative: "Excellent. Now, put that coin to good use. Your people need sustenance to work.",
-                goal: "Build 2 Farms (Tip: Farms placed adjacent to empty plains or flood plains yield far more food.)",
+                goal: "Build 2 Farms (Tip: You must build roads to conenct your buildings to. Farms seed adjacent plains, so find somewhere with lots of space to yield more food.)",
                 reward: "Next house bought is free",
                 isComplete: () => (tracker.built['Farm'] || 0) >= 2,
                 progress: () => `${Math.min(tracker.built['Farm'] || 0, 2)}/2 Farms`, 
@@ -360,7 +360,7 @@
             },
             {
                 narrative: "Your kingdom is growing. We will need raw materials to keep expanding.",
-                goal: "Build a Lumber Mill (Tip: Mills generate more wood for every adjacent forest. Note: Roads built on forests half that forest's production value!)",
+                goal: "Build a Lumber Mill (Tip: Mills generate 1 wood for every adjacent forest. However, roads built through forests half that forest's production value!)",
                 reward: "50 Wood",
                 isComplete: () => (tracker.built['LumberMill'] || 0) >= 1,
                 progress: () => `${Math.min(tracker.built['LumberMill'] || 0, 1)}/1 Lumber Mill`, 
@@ -369,7 +369,7 @@
             },
             {
                 narrative: "You will need more workers to send to the mines and mills.",
-                goal: "Build two tenement houses in designated build areas.",
+                goal: "Build two tenement houses within your cities.",
                 reward: "60 Stone",
                 isComplete: () => (tracker.built['House'] || 0) >= 2,
                 progress: () => `${Math.min(tracker.built['House'] || 0, 2)}/2 Houses`, 
@@ -396,7 +396,7 @@
             },
             {
                 narrative: "Laying infrastructure manually can be tedious. Let the royal architects streamline the process.",
-                goal: "Turn on Quick Build (Tip: Select an empty tile, click 'Build Access Road', then click 'Enable Quick Build' and drag a line to construct roads instantly!)",
+                goal: "Use Quick Build to build a road (Tip: After building a road, click 'Enable Quick Build', now anywhere you click will become a road if legal. Beware, tapping a distant tile in the same row or column as your current tile will build a long road on every intermediate tile too.)",
                 reward: "200 Gold",
                 isComplete: () => hasUsedQuickBuild,
                 progress: () => hasUsedQuickBuild ? "Quick Build Activated" : "Awaiting activation",
@@ -405,7 +405,7 @@
             },
             {
                 narrative: "We have discovered neighboring settlements. Bring them into our empire's fold to drastically increase our gold income.",
-                goal: "Connect a Town to the Capital with an Access Road.",
+                goal: "Connect a Town to the Capital using roads.",
                 reward: "250 Wood",
                 isComplete: () => connectedTownsCount >= 1,
                 progress: () => `${Math.min(connectedTownsCount, 1)}/1 Towns Connected`,
