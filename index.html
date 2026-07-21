@@ -266,6 +266,9 @@
         
         let capitalTier = 1, questTier = 0, freeHouses = 0;
         let questCapitalTaps = 0;
+        let questResourceTaps = 0; 
+        let hasUsedQuickBuild = false;
+        let hasFoundAtlantis = false;
         let breakdown = {};
         let harvestData = {}; 
         
@@ -338,8 +341,8 @@
                 claim: () => { resources.gold += 100; updateCapitalData(1, 0); } 
             },
             {
-                narrative: "Excellent. Now, put that coin to good use. Your people are hungry!",
-                goal: "Build 2 Farms",
+                narrative: "Excellent. Now, put that coin to good use. Your people need sustenance to work.",
+                goal: "Build 2 Farms (Tip: Farms placed adjacent to empty plains or flood plains yield far more food.)",
                 reward: "Next house bought is free",
                 isComplete: () => (tracker.built['Farm'] || 0) >= 2,
                 progress: () => `${Math.min(tracker.built['Farm'] || 0, 2)}/2 Farms`, 
@@ -347,8 +350,8 @@
                 claim: () => updateCapitalData(2, 1) 
             },
             {
-                narrative: "Time to explore your new kingdom, how far will your lands grow?",
-                goal: "Have 50 new tiles discovered", 
+                narrative: "Time to explore your new kingdom. How far will your lands grow?",
+                goal: "Have 50 new tiles discovered (Tip: All buildings and roads must connect back to the Capital to function!)", 
                 reward: "50 Wood",
                 isComplete: () => tracker.explored >= 75, 
                 progress: () => `${Math.min(Math.max(0, tracker.explored - 25), 50)}/50 New Tiles`, 
@@ -356,8 +359,8 @@
                 claim: () => { resources.wood += 50; updateCapitalData(3, 0); }
             },
             {
-                narrative: "Your kingdom is growing, we will need resources to keep expanding.",
-                goal: "Build a Lumber Mill",
+                narrative: "Your kingdom is growing. We will need raw materials to keep expanding.",
+                goal: "Build a Lumber Mill (Tip: Mills generate more wood for every adjacent forest. Note: Roads built on forests half that forest's production value!)",
                 reward: "50 Wood",
                 isComplete: () => (tracker.built['LumberMill'] || 0) >= 1,
                 progress: () => `${Math.min(tracker.built['LumberMill'] || 0, 1)}/1 Lumber Mill`, 
@@ -365,8 +368,8 @@
                 claim: () => { resources.wood += 50; updateCapitalData(4, 0); }
             },
             {
-                narrative: "You will need more workers to send to the mines and mills. We can build houses in towns to grow our population.",
-                goal: "Build two tenement houses",
+                narrative: "You will need more workers to send to the mines and mills.",
+                goal: "Build two tenement houses in designated build areas.",
                 reward: "60 Stone",
                 isComplete: () => (tracker.built['House'] || 0) >= 2,
                 progress: () => `${Math.min(tracker.built['House'] || 0, 2)}/2 Houses`, 
@@ -374,7 +377,7 @@
                 claim: () => { resources.stone += 60; updateCapitalData(5, 0); }
             },
             {
-                narrative: "Head to the mountains, there are resources to plunder there too.",
+                narrative: "Head to the mountains. There are heavy materials to be extracted there.",
                 goal: "Build a Stone Quarry",
                 reward: "100 Wood + 100 Stone",
                 isComplete: () => (tracker.built['Quarry'] || 0) >= 1,
@@ -384,6 +387,96 @@
                     resources.wood += 100; resources.stone += 100; 
                     updateCapitalData(6, 0); 
                 }
+            },
+            {
+                narrative: "Your automated passive income is helpful, but sometimes a kingdom requires a commander's direct touch.",
+                goal: "Tap Lumber Mills or Quarries to manually harvest resources 20 times.",
+                reward: "150 Gold",
+                isComplete: () => questResourceTaps >= 20,
+                progress: () => `${Math.min(questResourceTaps, 20)}/20 Manual Harvests`,
+                shortProgress: () => `${Math.min(questResourceTaps, 20)}/20`,
+                claim: () => { resources.gold += 150; updateCapitalData(7, 0); }
+            },
+            {
+                narrative: "Laying infrastructure manually can be tedious. Let the royal architects streamline the process.",
+                goal: "Turn on Quick Build (Tip: Select an empty tile, click 'Build Access Road', then click 'Enable Quick Build' and drag a line to construct roads instantly!)",
+                reward: "200 Gold",
+                isComplete: () => hasUsedQuickBuild,
+                progress: () => hasUsedQuickBuild ? "Quick Build Activated" : "Awaiting activation",
+                shortProgress: () => hasUsedQuickBuild ? "1/1" : "0/1",
+                claim: () => { resources.gold += 200; updateCapitalData(8, 0); }
+            },
+            {
+                narrative: "We have discovered neighboring settlements. Bring them into our empire's fold to drastically increase our gold income.",
+                goal: "Connect a Town to the Capital with an Access Road.",
+                reward: "250 Wood",
+                isComplete: () => connectedTownsCount >= 1,
+                progress: () => `${Math.min(connectedTownsCount, 1)}/1 Towns Connected`,
+                shortProgress: () => `${Math.min(connectedTownsCount, 1)}/1`,
+                claim: () => { resources.wood += 250; updateCapitalData(9, 0); }
+            },
+            {
+                narrative: "Our humble center of governance is no longer sufficient. It is time to expand the palace.",
+                goal: "Upgrade the Capital to Level 2 (Select the Capital tile to access upgrades).",
+                reward: "500 Gold",
+                isComplete: () => capitalTier >= 2,
+                progress: () => `Tier ${capitalTier}/2`,
+                shortProgress: () => `Lv ${capitalTier}/2`,
+                claim: () => { resources.gold += 500; updateCapitalData(10, 0); }
+            },
+            {
+                narrative: "The seas call to us. We need ships to harvest the bounties of the deep.",
+                goal: "Build a Shipyard (Tip: Shipyards must touch the coast. They allow you to build Shipping Lanes, which act exactly like roads on water!)",
+                reward: "100 Wood",
+                isComplete: () => (tracker.built['Shipyard'] || 0) >= 1,
+                progress: () => `${Math.min(tracker.built['Shipyard'] || 0, 1)}/1 Shipyard`,
+                shortProgress: () => `${Math.min(tracker.built['Shipyard'] || 0, 1)}/1`,
+                claim: () => { resources.wood += 100; updateCapitalData(11, 0); }
+            },
+            {
+                narrative: "To run an empire, we must manage a sprawling population. If food runs out, you cannot feed more workers.",
+                goal: "Have a max Workforce capacity of 40. (Tip: If Food and Workforce run out simultaneously, you can 'Demolish' an industrial building to regain the workforce needed to build a Farm.)",
+                reward: "500 Gold + 100 Stone",
+                isComplete: () => workforce.max >= 40,
+                progress: () => `${Math.min(workforce.max, 40)}/40 Max Workforce`,
+                shortProgress: () => `${Math.min(workforce.max, 40)}/40`,
+                claim: () => { resources.gold += 500; resources.stone += 100; updateCapitalData(12, 0); }
+            },
+            {
+                narrative: "A true maritime power commands a vast fleet. Deploy vessels to feed the masses.",
+                goal: "Deploy 4 Fishing Boats. (Tip: Boats must be placed on water connected to a Shipyard via Shipping Lanes.)",
+                reward: "300 Wood",
+                isComplete: () => (tracker.built['Boat'] || 0) >= 4,
+                progress: () => `${Math.min(tracker.built['Boat'] || 0, 4)}/4 Boats`,
+                shortProgress: () => `${Math.min(tracker.built['Boat'] || 0, 4)}/4`,
+                claim: () => { resources.wood += 300; updateCapitalData(13, 0); }
+            },
+            {
+                narrative: "Legend speaks of a sunken city possessing untold wealth. Search the deep waters.",
+                goal: "Find and loot the Sunken City of Atlantis.",
+                reward: "1000 Gold",
+                isComplete: () => hasFoundAtlantis,
+                progress: () => hasFoundAtlantis ? "Atlantis Looted" : "Searching...",
+                shortProgress: () => hasFoundAtlantis ? "1/1" : "0/1",
+                claim: () => { resources.gold += 1000; updateCapitalData(14, 0); }
+            },
+            {
+                narrative: "Our empire spans the horizon. To fund the most advanced industries, the palace must become a monument to our glory.",
+                goal: "Upgrade the Capital to Level 3.",
+                reward: "1000 Wood + 1000 Stone",
+                isComplete: () => capitalTier >= 3,
+                progress: () => `Tier ${capitalTier}/3`,
+                shortProgress: () => `Lv ${capitalTier}/3`,
+                claim: () => { resources.wood += 1000; resources.stone += 1000; updateCapitalData(15, 0); }
+            },
+            {
+                narrative: "With a Level 3 Capital, we can extract pure wealth from the earth.",
+                goal: "Build 3 Gold Mines on Gold Veins.",
+                reward: "10000 Gold",
+                isComplete: () => (tracker.built['Mine'] || 0) >= 3,
+                progress: () => `${Math.min(tracker.built['Mine'] || 0, 3)}/3 Mines`,
+                shortProgress: () => `${Math.min(tracker.built['Mine'] || 0, 3)}/3`,
+                claim: () => { resources.gold += 10000; updateCapitalData(16, 0); }
             }
         ];
 
@@ -599,6 +692,7 @@
 
         function toggleQuickBuildState() {
             quickBuildActive = !quickBuildActive;
+            hasUsedQuickBuild = true;
             let btn = document.getElementById('quick-build-offer');
             if(quickBuildActive) {
                 btn.classList.add('active');
@@ -628,7 +722,7 @@
                 openModal('loading-overlay'); // Show loading screen
                 
                 selectedTile = null; lastAnchorTile = null; activeQbType = null; harvestData = {};
-                questCapitalTaps = 0; currentZoom = 1.0; 
+                questCapitalTaps = 0; questResourceTaps = 0; hasUsedQuickBuild = false; hasFoundAtlantis = false; currentZoom = 1.0;
                 canvas.style.width = '4000px'; canvas.style.height = '4000px';
                 resources = { gold: 0, wood: 60, stone: 10, fish: 0, storedBoats: 0 };
                 hiredTravellers = [];
@@ -1752,9 +1846,11 @@
                             harvestData[key].lastClick = now;
                             if (isMill) {
                                 resources.wood += 1;
+                                questResourceTaps++;
                                 spawnFloatingText("+1 Wood", e.clientX, e.clientY, '#48bb78');
                             } else if (isQuarry) {
                                 resources.stone += 1;
+                                questResourceTaps++;
                                 spawnFloatingText("+1 Stone", e.clientX, e.clientY, '#a0aec0');
                             } else if (isCapital || isTown) {
                                 let taxAmt = isCapital ? (10 * capitalTier) : 10;
@@ -1809,6 +1905,7 @@
                         if (rawTerr === 'WA') {
                             showDialogue("Atlantis Found", "You found a great underwater city! Loot for 2000 Gold.", "Claim", () => {
                                 resources.gold += 2000;
+                                hasFoundAtlantis = true;
                                 updateResourceUI(); pushTileUpdate(selectedTile.row, selectedTile.col, 'U:Looted'); 
                             });
                         }
@@ -2006,6 +2103,41 @@
                     btn.innerText = `Harvest Big Fish (1 🐟)`;
                     btn.onclick = () => { resources.fish += 1; updateResourceUI(); pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Looted'); };
                     actionsContainer.appendChild(btn);
+                }
+
+                if (terr === 'C') {
+                    let nextTier = capitalTier + 1;
+                    if (nextTier <= 3) {
+                        let gCost = nextTier === 2 ? 500 : 2000;
+                        let wCost = nextTier === 2 ? 200 : 600;
+                        let sCost = nextTier === 2 ? 100 : 300;
+                        
+                        let btn = document.createElement('button');
+                        btn.style.backgroundColor = '#805ad5';
+                        let canAfford = resources.gold >= gCost && resources.wood >= wCost && resources.stone >= sCost;
+                        
+                        let reqs = [];
+                        if (resources.gold < gCost) reqs.push(`<span class="req-missing">${gCost} Gold</span>`); else reqs.push(`${gCost} Gold`);
+                        if (resources.wood < wCost) reqs.push(`<span class="req-missing">${wCost} Wood</span>`); else reqs.push(`${wCost} Wood`);
+                        if (resources.stone < sCost) reqs.push(`<span class="req-missing">${sCost} Stone</span>`); else reqs.push(`${sCost} Stone`);
+                        
+                        btn.innerHTML = `Upgrade Capital to Level ${nextTier}<br><span style="font-size: 13px; font-weight: normal;">(${reqs.join(' | ')})</span>`;
+                        btn.disabled = !canAfford;
+                        
+                        btn.onclick = () => {
+                            resources.gold -= gCost; resources.wood -= wCost; resources.stone -= sCost;
+                            let st = stateGrid[rIdx][cIdx];
+                            st = st.replace(/:Cap\d+/g, ''); // Clear old cap state
+                            pushTileUpdate(selectedTile.row, selectedTile.col, st + `:Cap${nextTier}`);
+                        };
+                        actionsContainer.appendChild(btn);
+                    } else {
+                        let btn = document.createElement('button');
+                        btn.style.backgroundColor = '#4a5568';
+                        btn.innerText = `Capital at Maximum Level (3)`;
+                        btn.disabled = true;
+                        actionsContainer.appendChild(btn);
+                    }
                 }
 
                 if (!builtString && terr !== 'C' && !state.includes(':Dam')) {
