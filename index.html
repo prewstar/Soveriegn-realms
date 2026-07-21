@@ -501,10 +501,13 @@
 
             // 2. Mobile Touch Pinch
             scrollContainer.addEventListener('touchstart', (e) => {
-                if (e.touches.length === 2) {
+                if (e.touches.length >= 2) {
+                    // FIX 1: Instantly kill the single-finger panning so it doesn't fight the pinch-zoom
+                    isPointerDown = false;
+                    isDraggingMap = false;
+
                     initialPinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                     let rect = scrollContainer.getBoundingClientRect();
-                    // Lock onto the exact center point between the user's two fingers
                     pinchCenter = {
                         x: ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left,
                         y: ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top
@@ -513,12 +516,32 @@
             });
 
             scrollContainer.addEventListener('touchmove', (e) => {
-                if (e.touches.length === 2 && initialPinchDist) {
+                if (e.touches.length >= 2 && initialPinchDist) {
                     e.preventDefault(); 
+                    
                     let newDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                    let rect = scrollContainer.getBoundingClientRect();
+                    
+                    // Find the NEW center point between the fingers
+                    let currentCenter = {
+                        x: ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left,
+                        y: ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top
+                    };
+
                     let zoomChange = newDist / initialPinchDist;
-                    setZoom(currentZoom * zoomChange, pinchCenter.x, pinchCenter.y);
+                    
+                    // FIX 2: Pan the map simultaneously to match the physical drift of the fingers
+                    let panX = pinchCenter.x - currentCenter.x;
+                    let panY = pinchCenter.y - currentCenter.y;
+                    scrollContainer.scrollLeft += panX;
+                    scrollContainer.scrollTop += panY;
+
+                    // Apply the focal zoom exactly at this new dynamic center
+                    setZoom(currentZoom * zoomChange, currentCenter.x, currentCenter.y);
+                    
+                    // Lock in these coordinates for the next millisecond frame
                     initialPinchDist = newDist; 
+                    pinchCenter = currentCenter;
                 }
             }, {passive: false});
 
