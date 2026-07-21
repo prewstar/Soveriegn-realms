@@ -1701,24 +1701,6 @@
                             }
                         }
 
-                        } else {
-                        ctx.fillStyle = TERRAIN_STYLES['H_FOG'].color;
-                        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-                        ctx.strokeStyle = '#232330';
-                        ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
-                    }
-                    
-                    // RENDER THE TREASURE MAP STAR IN THE FOG
-                    if (!isUncovered && state.includes(':Treasure')) {
-                        ctx.fillStyle = "#ffffff";
-                        ctx.font = "18px sans-serif";
-                        ctx.textAlign = "center";
-                        ctx.textBaseline = "middle";
-                        ctx.fillText('🌟', x + TILE_SIZE/2, y + TILE_SIZE/2);
-                    }
-
-                    if (selectedTile && selectedTile.row === r + 1 && selectedTile.col === c + 1) {
-
                         if (state.includes(':House') && effTerr !== 'FL') ctx.fillText('🏡', x + TILE_SIZE/2, y + TILE_SIZE/2);
                         if (state.includes(':LumberMill') && effTerr !== 'FL') ctx.fillText('🪵', x + TILE_SIZE/2, y + TILE_SIZE/2);
                         if (state.includes(':Quarry') && effTerr !== 'FL') ctx.fillText('⛏️', x + TILE_SIZE/2, y + TILE_SIZE/2);
@@ -1752,6 +1734,15 @@
                         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
                         ctx.strokeStyle = '#232330';
                         ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
+                    }
+                    
+                    // RENDER THE TREASURE MAP STAR IN THE FOG
+                    if (!isUncovered && state.includes(':Treasure')) {
+                        ctx.fillStyle = "#ffffff";
+                        ctx.font = "18px sans-serif";
+                        ctx.textAlign = "center";
+                        ctx.textBaseline = "middle";
+                        ctx.fillText('🌟', x + TILE_SIZE/2, y + TILE_SIZE/2);
                     }
 
                     if (selectedTile && selectedTile.row === r + 1 && selectedTile.col === c + 1) {
@@ -1794,7 +1785,7 @@
                 let rIdx = row - 1; let cIdx = col - 1;
                 let effTerr = getEffectiveTerrain(rawTerr, state, rIdx, cIdx);
                 
-                if (quickBuildActive && activeQbType && lastAnchorTile && !state.startsWith('U')) {
+                if (quickBuildActive && activeQbType && lastAnchorTile && state.startsWith('U')) {
                     let isLine = (lastAnchorTile.r === rIdx || lastAnchorTile.c === cIdx);
                     let path = []; let valid = true;
                     
