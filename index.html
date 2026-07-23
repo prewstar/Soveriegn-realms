@@ -452,18 +452,18 @@
                 narrative: "The land is becoming barren. We must give back to nature to sustain our lumber industry.",
                 goal: "Plant 4 Forests on Plains or Flood Plains.",
                 reward: "400 Stone",
-                isComplete: () => (tracker.tags['Planted'] || 0) >= 4,
-                progress: () => `${Math.min(tracker.tags['Planted'] || 0, 4)}/4 Forests Planted`,
-                shortProgress: () => `${Math.min(tracker.tags['Planted'] || 0, 4)}/4`,
+                isComplete: () => tracker.plantedCount >= 4,
+                progress: () => `${Math.min(tracker.plantedCount, 4)}/4 Forests Planted`,
+                shortProgress: () => `${Math.min(tracker.plantedCount, 4)}/4`,
                 claim: () => { resources.stone += 400; updateCapitalData(14, 0); }
             },
             {
                 narrative: "Our population booms. We must clear land for expansion and double down on agriculture.",
                 goal: "Clear 3 wild Forests AND reach a maximum Food capacity of 50.",
                 reward: "1500 Gold",
-                isComplete: () => (tracker.tags['Cleared'] || 0) >= 3 && food.max >= 50,
-                progress: () => `Cleared: ${Math.min(tracker.tags['Cleared'] || 0, 3)}/3 | Food: ${Math.min(food.max, 50)}/50`,
-                shortProgress: () => (tracker.tags['Cleared'] || 0) >= 3 && food.max >= 50 ? "Done" : "Tracking",
+                isComplete: () => tracker.clearedCount >= 3 && food.max >= 50,
+                progress: () => `Cleared: ${Math.min(tracker.clearedCount, 3)}/3 | Food: ${Math.min(food.max, 50)}/50`,
+                shortProgress: () => tracker.clearedCount >= 3 && food.max >= 50 ? "Done" : "Tracking",
                 claim: () => { resources.gold += 1500; updateCapitalData(15, 0); }
             },
             {
@@ -964,7 +964,7 @@
             let fabQuest = document.getElementById('fab-quest');
 
             if (questTier >= QUESTS.length) {
-                container.innerHTML = `<p style="color:#a0aec0; font-size:14px; text-align:center;">All current story quests completed!</p>`;
+                container.innerHTML = `All current story quests completed!`;
                 miniCounter.innerText = "Done";
                 fabQuest.style.backgroundColor = '#48bb78';
                 return;
@@ -979,17 +979,20 @@
                 fabQuest.style.backgroundColor = '#2d2d3d';
             }
 
-            let html = `
-                <p class="narrative">"${q.narrative}"</p>
-                <p style="font-size:15px; margin-bottom: 4px; color:white;"><b>Quest:</b> ${q.goal}</p>
-                <p style="font-size:15px; margin-bottom: 15px; color: #f6e05e;"><b>Reward:</b> ${q.reward}</p>
-            `;
+            let html = `"${q.narrative}"`;
+            
+            // Only show the actual goal and tips if the quest is NOT completed yet
+            if (!completed) {
+                html += `Quest: ${q.goal}`;
+            }
+            
+            html += `Reward: ${q.reward}`;
             
             if (completed) {
-                html += `<button class="modal-btn" style="background-color:#38a169;" onclick="claimQuest()">Claim Reward</button>`;
+                html += `Claim Reward`;
             } else {
                 let progressText = q.progress ? q.progress() : "Tracking...";
-                html += `<button class="modal-btn" disabled>In Progress... (${progressText})</button>`;
+                html += `In Progress... (${progressText})`;
             }
             container.innerHTML = html;
         }
@@ -997,6 +1000,8 @@
         window.claimQuest = function() {
             QUESTS[questTier].claim();
             updateResourceUI();
+            
+            closeModal('quest-modal'); // Instantly drops the player back to the map view!
             
             if (questTier < QUESTS.length) {
                 let q = QUESTS[questTier];
@@ -1483,6 +1488,8 @@
             tracker.terr = {};
             tracker.built = {};
             tracker.tags = {};
+            tracker.plantedCount = 0;
+            tracker.clearedCount = 0;
             
             workforce.used = 0; workforce.max = 10;
             food.used = 0; food.max = 0;
@@ -1514,6 +1521,8 @@
                         tracker.explored++;
                         tracker.terr[rawTerr] = (tracker.terr[rawTerr] || 0) + 1;
                         if (rawTerr === 'T') discoveredTownsCount++;
+                        if (st.includes(':Planted')) tracker.plantedCount++;
+                        if (st.includes(':Cleared')) tracker.clearedCount++;
                         
                         if (['AM', 'AP', 'AF'].includes(rawTerr) && !st.includes(':ClearedSlime')) {
                             food.max -= 10; breakdown.foodSlimePenalty += 10;
@@ -1818,7 +1827,7 @@
                         if (!ptSt.startsWith('U')) { valid = false; break; }
                         
                         if (actionKey === 'Road') {
-                            if (capitalTier < 1 || ['M','H','W','DW','WF','WBF','WA','FL','L','T','C','BA','FWD','MCR','PG','I'].includes(ptTerr) || (ptTerr && typeof ptTerr === 'string' && ptTerr.startsWith('WH')) || isWheatField(pt.r, pt.c) || isAlienSlime(mapGrid[pt.r][pt.c], ptSt) || (ptTerr === 'R' && !canBuildFord(pt.r, pt.c))) valid = false;
+                            if (capitalTier < 1 || ['M','H','W','DW','WF','WBF','WA','FL','L','T','C','BA','FWD','MCR','PG','I'].includes(ptTerr) || (ptTerr && typeof ptTerr === 'string' && ptTerr.startsWith('WH')) || isWheatField(pt.r, pt.c) || isAlienSlime(mapGrid[pt.r][pt.c], ptSt) || (isRiverType(ptTerr) && (capitalTier < 3 || !canBuildFord(pt.r, pt.c)))) valid = false;
                         } else if (actionKey === 'Lane') {
                             if (capitalTier < 5 || (!['W','WF','WBF','DW','WA','FL','L'].includes(ptTerr))) valid = false;
                         } else if (actionKey === 'Cleared') {
