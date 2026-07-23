@@ -2050,18 +2050,25 @@
 
         function spawnTreasureMap(startR, startC) {
             let candidates = [];
+            let fallback = []; // Added a fallback array
+            
             for (let r = 0; r < GRID_UNITS; r++) {
                 for (let c = 0; c < GRID_UNITS; c++) {
                     let st = stateGrid[r][c] || 'H';
                     // Must be unrevealed fog and not already have a treasure
                     if (!st.startsWith('U') && !st.includes(':Treasure')) {
+                        fallback.push({r, c}); // Store ALL fog tiles as a backup
                         let dist = Math.max(Math.abs(r - startR), Math.abs(c - startC));
                         if (dist >= 5 && dist <= 10) candidates.push({r, c});
                     }
                 }
             }
-            if (candidates.length > 0) {
-                let choice = candidates[Math.floor(Math.random() * candidates.length)];
+            
+            // If it can't find a perfect distance, grab any fog tile available
+            let listToUse = candidates.length > 0 ? candidates : fallback;
+            
+            if (listToUse.length > 0) {
+                let choice = listToUse[Math.floor(Math.random() * listToUse.length)];
                 stateGrid[choice.r][choice.c] += ':Treasure';
                 updateQueue.push({row: choice.r + 1, col: choice.c + 1, value: stateGrid[choice.r][choice.c], user: currentUser});
                 processUpdateQueue();
