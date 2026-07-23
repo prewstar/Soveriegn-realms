@@ -977,22 +977,20 @@
                 fabQuest.style.backgroundColor = '#48bb78';
             } else {
                 fabQuest.style.backgroundColor = '#2d2d3d';
-            }
-
-            let html = `"${q.narrative}"`;
+            }let html = `<p class="narrative">"${q.narrative}"</p>`;
             
             // Only show the actual goal and tips if the quest is NOT completed yet
             if (!completed) {
-                html += `Quest: ${q.goal}`;
+                html += `<p style="font-size:15px; margin-bottom: 4px; color:white;"><b>Quest:</b> ${q.goal}</p>`;
             }
             
-            html += `Reward: ${q.reward}`;
+            html += `<p style="font-size:15px; margin-bottom: 15px; color: #f6e05e;"><b>Reward:</b> ${q.reward}</p>`;
             
             if (completed) {
-                html += `Claim Reward`;
+                html += `<button class="modal-btn" style="background-color:#38a169;" onclick="claimQuest()">Claim Reward</button>`;
             } else {
                 let progressText = q.progress ? q.progress() : "Tracking...";
-                html += `In Progress... (${progressText})`;
+                html += `<button class="modal-btn" disabled>In Progress... (${progressText})</button>`;
             }
             container.innerHTML = html;
         }
@@ -2166,7 +2164,7 @@
                         }
                         
                         // 3. Spawn a new map? (Bumped to 15% chance for pacing. Change the 0.15 below to tweak)
-                        if (Math.random() < 0.15) {
+                        if (Math.random() < 1) {
                             setTimeout(() => spawnFloatingText("Treasure Map Found! 🌟", tx, ty - 50, '#f1c40f'), 600);
                             spawnTreasureMap(selectedTile.row - 1, selectedTile.col - 1);
                         }
