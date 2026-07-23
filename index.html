@@ -2140,12 +2140,18 @@
                 btn.innerHTML = `Explore Sector (<span class="${resources.gold < cost ? 'req-missing' : ''}">${cost} Gold</span>)`;
                 btn.disabled = resources.gold < cost;
                 btn.onclick = (e) => { 
-                    resources.gold -= cost; spawnFloatingText(`-${cost} Gold`, e.clientX, e.clientY);
+                    // 1. Calculate exact screen coordinates of the tile so text floats over the map, not the button
+                    let rect = canvas.getBoundingClientRect();
+                    let tx = rect.left + ((selectedTile.col - 1) * TILE_SIZE + TILE_SIZE/2) * currentZoom;
+                    let ty = rect.top + ((selectedTile.row - 1) * TILE_SIZE + TILE_SIZE/2) * currentZoom;
+
+                    resources.gold -= cost; 
+                    spawnFloatingText(`-${cost} Gold`, tx, ty);
                     
                     if ((rawTerr === 'DW' || isAlienSlimeType(rawTerr)) && !state.includes(':Tap1')) {
                         pushTileUpdate(selectedTile.row, selectedTile.col, state + ':Tap1');
                     } else {
-                        // Treasure Collection
+                        // 2. Treasure Collection
                         if (state.includes(':Treasure')) {
                             let resTypes = ['gold', 'wood', 'stone'];
                             let caps = { gold: globalGoldCap, wood: globalStorageCap, stone: globalStorageCap };
@@ -2153,14 +2159,15 @@
                             let perc = (Math.floor(Math.random() * 6) + 5) / 100; // 5% to 10%
                             let amt = Math.floor(caps[picked] * perc);
                             resources[picked] += amt;
-                            spawnFloatingText(`+${amt} ${picked.charAt(0).toUpperCase() + picked.slice(1)} (Treasure!)`, e.clientX, e.clientY + 20, '#f1c40f');
+                            
+                            // Stagger the text so it doesn't overlap the gold cost text
+                            setTimeout(() => spawnFloatingText(`+${amt} ${picked.toUpperCase()}`, tx, ty - 25, '#f1c40f'), 300);
                             updateResourceUI();
-                            state = state.replace(/:Treasure/g, ''); 
                         }
                         
-                        // Spawn a new map? (5% chance)
-                        if (Math.random() < 0.05) {
-                            spawnFloatingText("Treasure Map Found! 🌟", e.clientX, e.clientY - 20, '#f1c40f');
+                        // 3. Spawn a new map? (Bumped to 15% chance for pacing. Change the 0.15 below to tweak)
+                        if (Math.random() < 0.15) {
+                            setTimeout(() => spawnFloatingText("Treasure Map Found! 🌟", tx, ty - 50, '#f1c40f'), 600);
                             spawnTreasureMap(selectedTile.row - 1, selectedTile.col - 1);
                         }
                         
