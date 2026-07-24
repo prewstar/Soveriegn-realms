@@ -321,6 +321,18 @@
         };
         const WORKFORCE_COSTS = { LumberMill: 2, Quarry: 3, Mine: 4, Farm: 2, Boat: 1, Shipyard: 2, Road: 0, Lane: 0, House: 0, Dam: 0 };
 
+        const DEMOLISH_MAP = {
+            'Road': { name: 'Access Road', refund: Math.floor(COSTS.road * 0.5), res: 'gold' },
+            'Lane': { name: 'Shipping Lane', refund: Math.floor(COSTS.lane * 0.5), res: 'gold' },
+            'House': { name: 'Tenement House', refund: Math.floor(COSTS.house * 0.5), res: 'wood' },
+            'LumberMill': { name: 'Lumber Mill', refund: Math.floor(COSTS.lumbermill * 0.5), res: 'wood' },
+            'Quarry': { name: 'Stone Quarry', refund: Math.floor(COSTS.quarry * 0.5), res: 'stone' },
+            'Mine': { name: 'Gold Mine', refund: Math.floor(COSTS.goldmine * 0.5), res: 'wood' },
+            'Shipyard': { name: 'Shipyard', refund: Math.floor(COSTS.shipyard * 0.5), res: 'wood' },
+            'Farm': { name: 'Wheat Farm', refund: Math.floor(COSTS.farm * 0.5), res: 'wood' },
+            'Dam': { name: 'River Dam', refund: 25, res: 'wood' }
+        };
+
         const TRAVELLERS = {
             'WM': { name: 'Woodsman', icon: '🪓', desc: 'All Lumber Mills produce +1 Wood.' },
             'SP': { name: 'Spy', icon: '🕵️', desc: 'Decreases cost of exploration by 20%.' },
@@ -520,27 +532,27 @@
         const TERRAIN_STYLES = {
             'H_FOG': { color: '#1a202c', text: '', label: 'Deep Mist' }, 
             'P': { color: '#48bb78', text: '', label: 'Plains' },
-            'F': { color: '#2f855a', text: '🌲', label: 'Forest' },
-            'M': { color: '#718096', text: '⛰️', label: 'Mountain' },
-            'H': { color: '#8d99ae', text: '⛰️', label: 'Hills' },
-            'W': { color: '#3182ce', text: '🌊', label: 'Sea' },
-            'DW': { color: '#1e40af', text: '🌊', label: 'Deep Water' },
+            'F': { color: '#2f855a', text: '🌲', label: 'Forest 🌲' },
+            'M': { color: '#718096', text: '⛰️⛰️', label: 'Mountain ⛰️⛰️' },
+            'H': { color: '#8d99ae', text: '⛰️', label: 'Hills ⛰️' },
+            'W': { color: '#3182ce', text: '', label: 'Sea' },
+            'DW': { color: '#1e40af', text: '', label: 'Deep Water' },
             'WF': { color: '#3182ce', text: '🐟', label: 'Fish Shoal' },
             'WBF': { color: '#3182ce', text: '🐋', label: 'Big Fish Shoal' },
             'WA': { color: '#3182ce', text: '🔱', label: 'Sunken Atlantis' },
             'R': { color: '#48bb78', text: '', label: 'River' },
-            'DR': { color: '#38a169', text: '💧', label: 'Rushing River' },
+            'DR': { color: '#38a169', text: '', label: 'Damable River' },
             'RBD': { color: '#48bb78', text: '🪵', label: 'Beaver Dam' },
             'FP': { color: '#50bb70', text: '', label: 'Flood Plain' },
             'FL': { color: '#3182ce', text: '', label: 'Flooded Lake' }, 
-            'TOD': { color: '#3182ce', text: '⛲', label: 'River Source' },
-            'C': { color: '#9f7aea', text: '🏰', label: 'Capital Center' },
-            'T': { color: '#b794f4', text: '🏘️', label: 'Town' },
+            'TOD': { color: '#3182ce', text: '', label: 'River' },
+            'C': { color: '#9f7aea', text: '🏰', label: 'Capital Center 🏰' },
+            'T': { color: '#b794f4', text: '🏘️', label: 'Town 🏘️' },
             'BA': { color: '#DBD370', text: '🍂', label: 'Build Area' },
             'G': { color: '#ecc94b', text: '🪙', label: 'Gold Vein' },
             'WH': { color: '#000000', text: '🌀', label: 'Wormhole' },
-            'FWD': { color: '#2f855a', text: '🐺', label: 'Wolf Den' },
-            'MCR': { color: '#718096', text: '🏯', label: 'Castle Ruins' },
+            'FWD': { color: '#2f855a', text: '🐺', label: 'Wolf Den 🐺' },
+            'MCR': { color: '#718096', text: '🏯', label: 'Castle Ruins 🏯' },
             'PG': { color: '#dd6b20', text: '🛡️', label: 'Plains Guild' },
             'I': { color: '#8b4513', text: '🍻', label: 'Wayside Inn' },
             'AM': { color: '#805ad5', text: '🦠', label: 'Alien Slime' },
@@ -1842,7 +1854,9 @@
                 let effTerr = getEffectiveTerrain(rawTerr, state, rIdx, cIdx);
                 
                 if (quickBuildActive && activeQbType && lastAnchorTile && state.startsWith('U')) {
-                    let isLine = (lastAnchorTile.r === rIdx || lastAnchorTile.c === cIdx);
+                    
+                    // ONLY draw lines if the action is a Road or a Lane
+                    let isLine = (activeQbType === 'Road' || activeQbType === 'Lane') && (lastAnchorTile.r === rIdx || lastAnchorTile.c === cIdx);
                     let path = []; let valid = true;
                     
                     if (isLine) {
@@ -1857,55 +1871,149 @@
                     let toBuild = [];
                     let actionKey = activeQbType; 
                     
+                    // VALIDATION PHASE
                     for (let pt of path) {
                         let ptSt = stateGrid[pt.r][pt.c];
                         let ptTerr = getEffectiveTerrain(mapGrid[pt.r][pt.c], ptSt, pt.r, pt.c);
+                        let rawTerr = mapGrid[pt.r][pt.c];
                         
-                        if (actionKey === 'DemolishRoad') {
-                            // FIX: Don't invalidate the path if a tile is missing a road (like the anchor tile you just demolished). 
-                            // Just skip the empty tiles and queue the ones that actually have roads.
-                            if (ptSt.includes(':Road')) { 
-                                toBuild.push(pt); 
-                            }
+                        // Handle special quick-actions first
+                        if (actionKey.startsWith('Demolish')) {
+                            let targetTag = actionKey.replace('Demolish', '');
+                            if (ptSt.includes(`:${targetTag}`)) toBuild.push(pt);
+                            continue; // Skip standard building checks
+                        }
+                        if (actionKey === 'StowBoat') {
+                            if (ptSt.includes(':Boat')) toBuild.push(pt);
+                            continue;
+                        }
+                        if (actionKey === 'ClearedSlime') {
+                            if (isAlienSlime(rawTerr, ptSt)) toBuild.push(pt);
                             continue;
                         }
                         
                         if (ptSt.includes(`:${actionKey}`)) continue; 
                         if (!ptSt.startsWith('U')) { valid = false; break; }
                         
+                        // Handle all terrain logic dynamically
                         if (actionKey === 'Road') {
-                            if (capitalTier < 1 || ['M','H','W','DW','WF','WBF','WA','FL','L','T','C','BA','FWD','MCR','PG','I'].includes(ptTerr) || (ptTerr && typeof ptTerr === 'string' && ptTerr.startsWith('WH')) || isWheatField(pt.r, pt.c) || isAlienSlime(mapGrid[pt.r][pt.c], ptSt) || (isRiverType(ptTerr) && (capitalTier < 3 || !canBuildFord(pt.r, pt.c)))) valid = false;
+                            if (capitalTier < 1 || ['M','H','W','DW','WF','WBF','WA','FL','L','T','C','BA','FWD','MCR','PG','I'].includes(ptTerr) || (ptTerr && typeof ptTerr === 'string' && ptTerr.startsWith('WH')) || isWheatField(pt.r, pt.c) || isAlienSlime(rawTerr, ptSt) || (isRiverType(ptTerr) && (capitalTier < 3 || !canBuildFord(pt.r, pt.c)))) valid = false;
                         } else if (actionKey === 'Lane') {
                             if (capitalTier < 5 || (!['W','WF','WBF','DW','WA','FL','L'].includes(ptTerr))) valid = false;
                         } else if (actionKey === 'Cleared') {
                             if (capitalTier < 3 || ptTerr !== 'F' || ptSt.includes(':Planted')) valid = false;
                         } else if (actionKey === 'Planted') {
                             if (capitalTier < 3 || (ptTerr !== 'P' && ptTerr !== 'FP') || ptSt.includes(':Cleared') || isWheatField(pt.r, pt.c)) valid = false;
+                        } else {
+                            // Standard Buildings Validation
+                            if (!canAttachToNetwork(pt.r, pt.c) && actionKey !== 'Dam' && actionKey !== 'Boat') valid = false; 
+                            if (actionKey === 'House' && ptTerr !== 'BA') valid = false;
+                            if ((actionKey === 'LumberMill' || actionKey === 'Farm') && (ptTerr !== 'P' && ptTerr !== 'FP')) valid = false;
+                            if (actionKey === 'Quarry' && ptTerr !== 'M' && ptTerr !== 'H') valid = false;
+                            if (actionKey === 'Mine' && ptTerr !== 'G') valid = false;
+                            if (actionKey === 'Shipyard' && !isCoastal(pt.r, pt.c)) valid = false;
+                            if (actionKey === 'Boat' && !checkBoatPlacement(pt.r, pt.c).allowed) valid = false;
+                            if (actionKey === 'Dam' && ptTerr !== 'DR') valid = false;
                         }
+                        
                         if (!valid) break;
                         toBuild.push(pt);
                     }
                     
+                    // EXECUTION PHASE
                     if (valid && toBuild.length > 0) {
-                        if (actionKey === 'DemolishRoad') {
-                            // Give refunds instead of charging
-                            let totalRefund = toBuild.length * Math.floor(COSTS.road * 0.5);
-                            resources.gold += totalRefund;
-                            spawnFloatingText(`+${totalRefund} Gold`, e.clientX, e.clientY, '#f6e05e');
+                        
+                        if (actionKey.startsWith('Demolish')) {
+                            let targetTag = actionKey.replace('Demolish', '');
+                            let info = DEMOLISH_MAP[targetTag];
+                            if (!info) return;
+                            
+                            let totalRefund = toBuild.length * info.refund;
+                            resources[info.res] += totalRefund;
+                            
+                            let resName = info.res === 'gold' ? 'Gold' : info.res === 'wood' ? 'Wood' : 'Stone';
+                            spawnFloatingText(`+${totalRefund} ${resName}`, e.clientX, e.clientY, '#f6e05e');
+                            
                             toBuild.forEach(pt => {
                                 let ptSt = stateGrid[pt.r][pt.c];
-                                pushTileUpdate(pt.r + 1, pt.c + 1, ptSt.replace(':Road', ''), 'DemolishRoad');
+                                pushTileUpdate(pt.r + 1, pt.c + 1, ptSt.replace(`:${targetTag}`, ''), actionKey);
                             });
                             lastAnchorTile = { r: rIdx, c: cIdx, type: actionKey }; 
                             return;
                         }
+                        
+                        if (actionKey === 'StowBoat') {
+                            resources.storedBoats += toBuild.length;
+                            spawnFloatingText(`+${toBuild.length} ⛵`, e.clientX, e.clientY, '#3182ce');
+                            toBuild.forEach(pt => {
+                                let ptSt = stateGrid[pt.r][pt.c];
+                                pushTileUpdate(pt.r + 1, pt.c + 1, ptSt.replace(':Boat', ''), actionKey);
+                            });
+                            lastAnchorTile = { r: rIdx, c: cIdx, type: actionKey }; 
+                            return;
+                        }
+                        
+                        if (actionKey === 'ClearedSlime') {
+                            let cost = 150 * toBuild.length;
+                            if (resources.gold >= cost) {
+                                resources.gold -= cost;
+                                spawnFloatingText(`-${cost} Gold`, e.clientX, e.clientY, '#f6e05e');
+                                toBuild.forEach(pt => {
+                                    pushTileUpdate(pt.r + 1, pt.c + 1, stateGrid[pt.r][pt.c] + ':ClearedSlime', actionKey);
+                                });
+                                lastAnchorTile = { r: rIdx, c: cIdx, type: actionKey };
+                                return;
+                            } else {
+                                spawnFloatingText("Not enough gold!", e.clientX, e.clientY, '#fc8181');
+                                return;
+                            }
+                        }
 
-                        let unitCost = (actionKey === 'Road') ? COSTS.road : (actionKey === 'Lane') ? COSTS.lane : COSTS.terraform;
+                        // Generic Standard Building Execution
+                        let unitCost = 0;
+                        let costRes = 'gold';
+                        
+                        if (actionKey === 'Cleared' || actionKey === 'Planted') {
+                            unitCost = COSTS.terraform;
+                        } else {
+                            let costKey = actionKey.toLowerCase();
+                            if (costKey === 'mine') costKey = 'goldmine';
+                            unitCost = COSTS[costKey] || 0;
+                            
+                            if (['House', 'LumberMill', 'Farm', 'Shipyard', 'Mine', 'Boat', 'Dam'].includes(actionKey)) costRes = 'wood';
+                            else if (actionKey === 'Quarry') costRes = 'stone';
+                        }
+                        
+                        let freeHousesUsed = 0;
+                        if (actionKey === 'House' && freeHouses > 0) {
+                            unitCost = 0;
+                            freeHousesUsed = 1;
+                        }
+                        
                         let totalCost = toBuild.length * unitCost;
                         
-                        if (resources.gold >= totalCost) {
-                            resources.gold -= totalCost;
-                            spawnFloatingText(`-${totalCost} Gold`, e.clientX, e.clientY);
+                        if (resources[costRes] >= totalCost) {
+                            let wfCost = (WORKFORCE_COSTS[actionKey] || 0) * toBuild.length;
+                            let fCost = (actionKey === 'House' ? 1 : 0) * toBuild.length;
+                            
+                            // Check capacities before building
+                            if (wfCost > 0 && workforce.used + wfCost > workforce.max) {
+                                spawnFloatingText("Not enough Workforce!", e.clientX, e.clientY, '#fc8181'); return;
+                            }
+                            if (fCost > 0 && food.max - food.used < fCost) {
+                                spawnFloatingText("Not enough Food!", e.clientX, e.clientY, '#fc8181'); return;
+                            }
+                            
+                            resources[costRes] -= totalCost;
+                            if (freeHousesUsed > 0) updateCapitalData(null, -1);
+                            
+                            if (totalCost > 0) {
+                                let resStr = costRes === 'gold' ? 'Gold' : costRes === 'wood' ? 'Wood' : 'Stone';
+                                spawnFloatingText(`-${totalCost} ${resStr}`, e.clientX, e.clientY, '#f6e05e');
+                            } else if (freeHousesUsed > 0) {
+                                spawnFloatingText("FREE", e.clientX, e.clientY, '#48bb78');
+                            }
+                            
                             toBuild.forEach(pt => {
                                 let bSt = getBaseStateString(stateGrid[pt.r][pt.c]);
                                 pushTileUpdate(pt.r + 1, pt.c + 1, `${bSt}:${actionKey}`, actionKey);
@@ -1913,10 +2021,9 @@
                             lastAnchorTile = { r: rIdx, c: cIdx, type: actionKey }; 
                             return; 
                         } else {
-                            spawnFloatingText("Not enough gold!", e.clientX, e.clientY, '#fc8181');
+                            spawnFloatingText(`Not enough ${costRes}!`, e.clientX, e.clientY, '#fc8181');
                             return;
                         }
-                    // FIX: Only show Path Blocked if the path is actually invalid
                     } else if (!valid && path.length > 1) {
                         spawnFloatingText("Path blocked!", e.clientX, e.clientY, '#fc8181');
                         return;
@@ -2440,23 +2547,10 @@
                     btn.innerText = `Stow Boat to Inventory`;
                     btn.onclick = () => {
                         resources.storedBoats = (resources.storedBoats || 0) + 1;
-                        pushTileUpdate(selectedTile.row, selectedTile.col, state.replace(/:Boat/g, ''));
+                        pushTileUpdate(selectedTile.row, selectedTile.col, state.replace(/:Boat/g, ''), 'StowBoat');
                     };
                     actionsContainer.appendChild(btn);
                 }
-                
-                // NEW Dynamic Targeted Demolition
-                const DEMOLISH_MAP = {
-                    'Road': { name: 'Access Road', refund: Math.floor(COSTS.road * 0.5), res: 'gold' },
-                    'Lane': { name: 'Shipping Lane', refund: Math.floor(COSTS.lane * 0.5), res: 'gold' },
-                    'House': { name: 'Tenement House', refund: Math.floor(COSTS.house * 0.5), res: 'wood' },
-                    'LumberMill': { name: 'Lumber Mill', refund: Math.floor(COSTS.lumbermill * 0.5), res: 'wood' },
-                    'Quarry': { name: 'Stone Quarry', refund: Math.floor(COSTS.quarry * 0.5), res: 'stone' },
-                    'Mine': { name: 'Gold Mine', refund: Math.floor(COSTS.goldmine * 0.5), res: 'wood' },
-                    'Shipyard': { name: 'Shipyard', refund: Math.floor(COSTS.shipyard * 0.5), res: 'wood' },
-                    'Farm': { name: 'Wheat Farm', refund: Math.floor(COSTS.farm * 0.5), res: 'wood' },
-                    'Dam': { name: 'River Dam', refund: 25, res: 'wood' }
-                };
 
                 let currentTags = state.split(':');
                 currentTags.forEach(tag => {
@@ -2470,7 +2564,7 @@
                             resources[info.res] += info.refund;
                             let newState = state.replace(':' + tag, '');
                             // If it's a road, activate the Quick 'DemolishRoad' action
-                            let quickAction = tag === 'Road' ? 'DemolishRoad' : null;
+                            let quickAction = `Demolish${tag}`; 
                             pushTileUpdate(selectedTile.row, selectedTile.col, newState, quickAction);
                             updateResourceUI();
                         };
