@@ -1769,6 +1769,52 @@
             }
         }
 
+        function spawnTreasureMap(startR, startC) {
+    let candidates = [];
+    let fallback = []; 
+    
+    // Scan the map for unexplored tiles
+    for (let r = 0; r < GRID_UNITS; r++) {
+        for (let c = 0; c < GRID_UNITS; c++) {
+            let st = stateGrid[r][c] || 'H';
+            
+            // Tile must be hidden and not already holding a treasure
+            if (!st.startsWith('U') && !st.includes(':Treasure')) {
+                fallback.push({r, c}); 
+                
+                // Prefer tiles that are 5 to 15 spaces away
+                let dist = Math.max(Math.abs(r - startR), Math.abs(c - startC));
+                if (dist >= 5 && dist <= 15) {
+                    candidates.push({r, c});
+                }
+            }
+        }
+    }
+    
+    // Pick a candidate, falling back to any valid fog tile if the distance check fails
+    let listToUse = candidates.length > 0 ? candidates : fallback;
+    
+    if (listToUse.length > 0) {
+        let choice = listToUse[Math.floor(Math.random() * listToUse.length)];
+        let newState = (stateGrid[choice.r][choice.c] || 'H') + ':Treasure';
+        
+        // Push the update so it saves to the backend and renders immediately
+        pushTileUpdate(choice.r + 1, choice.c + 1, newState);
+    }
+}
+    
+    // Pick a candidate, falling back to any valid fog tile if the distance check fails
+    let listToUse = candidates.length > 0 ? candidates : fallback;
+    
+    if (listToUse.length > 0) {
+        let choice = listToUse[Math.floor(Math.random() * listToUse.length)];
+        let newState = (stateGrid[choice.r][choice.c] || 'H') + ':Treasure';
+        
+        // Push the update so it saves to the backend and renders immediately
+        pushTileUpdate(choice.r + 1, choice.c + 1, newState);
+    }
+}
+
         canvas.addEventListener('click', (e) => {
             if (!currentUser) return;
             
@@ -1932,12 +1978,39 @@
                         }
                         
                         if (resources.gold < cost) {
-                            spawnFloatingText("Insufficient funds!", e.clientX, e.clientY, '#fc8181');
-                            return;
-                        }
-                        resources.gold -= cost;
-                        spawnFloatingText(`-${cost} Gold`, e.clientX, e.clientY, '#f6e05e');
-                        pushTileUpdate(row, col, 'U');
+                    spawnFloatingText("Insufficient funds!", e.clientX, e.clientY, '#fc8181');
+                    return;
+                }
+                resources.gold -= cost;
+                spawnFloatingText(`-${cost} Gold`, e.clientX, e.clientY, '#f6e05e');
+                
+                // ===== NEW TREASURE LOGIC START =====
+                
+                // 1. Collect treasure if this tile had the tag
+                if (state.includes(':Treasure')) {
+                    let resTypes = ['gold', 'wood', 'stone'];
+                    let picked = resTypes[Math.floor(Math.random() * resTypes.length)];
+                    let amt = Math.floor(Math.random() * 100) + 50; // Grants 50-150 random resource
+                    
+                    resources[picked] += amt;
+                    
+                    // Delay slightly so it doesn't overlap the gold cost floating text
+                    setTimeout(() => {
+                        spawnFloatingText(`+${amt} ${picked.toUpperCase()} FOUND!`, e.clientX, e.clientY - 25, '#f1c40f');
+                        updateResourceUI();
+                    }, 300); 
+                }
+                
+                // 2. Chance to spawn a new treasure map (Currently 100% for testing)
+                // Once verified, change `1` to `0.05` for 5% or `0.1` for 10%
+                if (Math.random() < 1) { 
+                    setTimeout(() => spawnFloatingText("Treasure Map Found! 🌟", e.clientX, e.clientY - 50, '#f1c40f'), 600);
+                    spawnTreasureMap(row - 1, col - 1);
+                }
+                
+                // ===== NEW TREASURE LOGIC END =====
+
+                pushTileUpdate(row, col, 'U'); // This cleanly wipes the :Treasure tag once uncovered
                         
                         if (rawTerr && typeof rawTerr === 'string' && rawTerr.startsWith('WH')) {
                             showDialogue("Deep Cave Found", "You found a deep cave. Do you go inside?", "Yes", () => {
