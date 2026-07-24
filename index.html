@@ -546,6 +546,12 @@
             'AM': { color: '#805ad5', text: '🦠', label: 'Alien Slime' },
             'AP': { color: '#805ad5', text: '🦠', label: 'Alien Slime' },
             'AF': { color: '#805ad5', text: '🦠', label: 'Alien Slime' },
+            'AW': { color: '#805ad5', text: '🦠', label: 'Alien Slime' },
+            'AH': { color: '#805ad5', text: '🦠', label: 'Alien Slime' },
+            'AT': { color: '#805ad5', text: '🦠', label: 'Alien Slime' },
+            'ABA': { color: '#805ad5', text: '🦠', label: 'Alien Slime' },
+            'AG': { color: '#805ad5', text: '🦠', label: 'Alien Slime' },
+            'ADW': { color: '#805ad5', text: '🦠', label: 'Alien Slime' },
             'L': { color: '#3182ce', text: '', label: 'Lake' }
         };
 
@@ -1080,7 +1086,7 @@
         }
 
         // --- Core Base Logic ---
-        function isAlienSlimeType(rawTerr) { return rawTerr === 'AM' || rawTerr === 'AP' || rawTerr === 'AF'; }
+        function isAlienSlimeType(rawTerr) { return rawTerr === 'AM' || rawTerr === 'AP' || rawTerr === 'AF' || rawTerr === 'AW' || rawTerr === 'AH' || rawTerr === 'AT' || rawTerr === 'ABA' || rawTerr === 'AG' || rawTerr === 'ADW'; }
         
         function isAlienSlime(rawTerr, st) {
             return isAlienSlimeType(rawTerr) && st.startsWith('U') && !st.includes(':ClearedSlime');
@@ -1095,6 +1101,12 @@
                 if (rawTerr === 'AM') return 'M';
                 if (rawTerr === 'AP') return 'P';
                 if (rawTerr === 'AF') return 'F';
+                if (rawTerr === 'AW') return 'W';
+                if (rawTerr === 'ADW') return 'DW';
+                if (rawTerr === 'AH') return 'H';
+                if (rawTerr === 'AT') return 'T';
+                if (rawTerr === 'ABA') return 'BA';
+                if (rawTerr === 'AG') return 'G';
             }
             
             let isFlooded = false;
