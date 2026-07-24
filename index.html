@@ -1118,9 +1118,12 @@
             
             if (!st.startsWith('U')) {
                 if (isFlooded) return 'FL'; 
-                if (rawTerr === 'DW' || rawTerr === 'WBF' || rawTerr === 'WA') return 'W';
+                if (rawTerr === 'DW' || rawTerr === 'WBF' || rawTerr === 'WA' || rawTerr === 'ADW' || rawTerr === 'AW') return 'W';
                 if (rawTerr === 'FWD' || rawTerr === 'AF') return 'F';
                 if (rawTerr === 'MCR' || rawTerr === 'AM') return 'M';
+                if (rawTerr === 'AH' || rawTerr === 'AG') return 'H';
+                if (rawTerr === 'AT') return 'T';
+                 if (rawTerr === 'ABA') return 'BA';
                 if (rawTerr === 'RBD' || rawTerr === 'DR' || rawTerr === 'TOD') return 'R';
                 if (rawTerr === 'PG' || rawTerr === 'AP' || rawTerr === 'FP') return 'P';
                 if (rawTerr === 'I') return 'P';
