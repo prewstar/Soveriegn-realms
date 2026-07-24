@@ -36,7 +36,7 @@
         .map-wrapper { flex: 1; overflow: auto; background: #0f0f14; position: relative; cursor: grab; touch-action: auto; scroll-behavior: auto; } 
         .map-wrapper:active { cursor: grabbing; }
         
-        canvas { display: block; width: 4000px; height: 4000px; } 
+        canvas { display: block; width: 4400px; height: 4400px; } 
         
         .fab-container { position: absolute; top: 15px; right: 15px; display: flex; flex-direction: column; gap: 12px; z-index: 50; align-items: center; }
         .fab { width: 45px; height: 45px; border-radius: 50%; background: #2d2d3d; border: 2px solid #4a5568; color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.5); pointer-events: auto; cursor: pointer; transition: background-color 0.3s; }
@@ -204,7 +204,7 @@
         </div>
 
         <div class="map-wrapper" id="map-scroll-container">
-            <canvas id="gameCanvas" width="4000" height="4000"></canvas>
+            <canvas id="gameCanvas" width="4400" height="4400"></canvas>
         </div>
 
         <div class="bottom-panel" id="bottom-panel">
@@ -228,7 +228,7 @@
         const API_URL = "https://script.google.com/macros/s/AKfycbxIuuJZZE0ACC9nPjYfZF-n8atmgFQk6ZZOiL5BswnQ7GB2EBypSyl7k_0GD8qOxpTP/exec";
 
         const TILE_SIZE = 40;
-        const GRID_UNITS = 100;
+        const GRID_UNITS = 110;
         
         let currentUser = "";
         let mapGrid = [];
@@ -306,8 +306,8 @@
 
             currentZoom = newZoom;
             let cvs = document.getElementById('gameCanvas');
-            cvs.style.width = `${4000 * currentZoom}px`;
-            cvs.style.height = `${4000 * currentZoom}px`;
+            cvs.style.width = `${4400 * currentZoom}px`;
+            cvs.style.height = `${4400 * currentZoom}px`;
 
             // Adjust the scrollbars so that exact point stays under their cursor/fingers
             sc.scrollLeft = (canvasX * currentZoom) - focalX;
@@ -762,7 +762,7 @@
                 
                 selectedTile = null; lastAnchorTile = null; activeQbType = null; harvestData = {};
                 questCapitalTaps = 0; questResourceTaps = 0; hasUsedQuickBuild = false; hasFoundAtlantis = false; currentZoom = 1.0;
-                canvas.style.width = '4000px'; canvas.style.height = '4000px';
+                canvas.style.width = '4400px'; canvas.style.height = '4400px';
                 resources = { gold: 0, wood: 60, stone: 10, fish: 0, storedBoats: 0 };
                 hiredTravellers = [];
                 lastTickTime = Date.now();
@@ -1832,7 +1832,7 @@
             const col = Math.floor((e.clientX - rect.left) / (TILE_SIZE * currentZoom)) + 1;
             const row = Math.floor((e.clientY - rect.top) / (TILE_SIZE * currentZoom)) + 1;
 
-            if(row > 0 && row <= 100 && col > 0 && col <= 100) {
+            if(row > 0 && row <= GRID_UNITS && col > 0 && col <= GRID_UNITS) {
                 let state = stateGrid[row - 1][col - 1] || 'H';
                 let rawTerr = mapGrid[row - 1][col - 1] || 'P';
                 let rIdx = row - 1; let cIdx = col - 1;
