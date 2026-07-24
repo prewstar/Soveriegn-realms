@@ -1770,50 +1770,38 @@
         }
 
         function spawnTreasureMap(startR, startC) {
-    let candidates = [];
-    let fallback = []; 
-    
-    // Scan the map for unexplored tiles
-    for (let r = 0; r < GRID_UNITS; r++) {
-        for (let c = 0; c < GRID_UNITS; c++) {
-            let st = stateGrid[r][c] || 'H';
+            let candidates = [];
+            let fallback = []; 
             
-            // Tile must be hidden and not already holding a treasure
-            if (!st.startsWith('U') && !st.includes(':Treasure')) {
-                fallback.push({r, c}); 
-                
-                // Prefer tiles that are 5 to 15 spaces away
-                let dist = Math.max(Math.abs(r - startR), Math.abs(c - startC));
-                if (dist >= 5 && dist <= 15) {
-                    candidates.push({r, c});
+            // Scan the map for unexplored tiles
+            for (let r = 0; r < GRID_UNITS; r++) {
+                for (let c = 0; c < GRID_UNITS; c++) {
+                    let st = stateGrid[r][c] || 'H';
+                    
+                    // Tile must be hidden and not already holding a treasure
+                    if (!st.startsWith('U') && !st.includes(':Treasure')) {
+                        fallback.push({r, c}); 
+                        
+                        // Prefer tiles that are 5 to 15 spaces away
+                        let dist = Math.max(Math.abs(r - startR), Math.abs(c - startC));
+                        if (dist >= 5 && dist <= 15) {
+                            candidates.push({r, c});
+                        }
+                    }
                 }
             }
+            
+            // Pick a candidate, falling back to any valid fog tile if the distance check fails
+            let listToUse = candidates.length > 0 ? candidates : fallback;
+            
+            if (listToUse.length > 0) {
+                let choice = listToUse[Math.floor(Math.random() * listToUse.length)];
+                let newState = (stateGrid[choice.r][choice.c] || 'H') + ':Treasure';
+                
+                // Push the update so it saves to the backend and renders immediately
+                pushTileUpdate(choice.r + 1, choice.c + 1, newState);
+            }
         }
-    }
-    
-    // Pick a candidate, falling back to any valid fog tile if the distance check fails
-    let listToUse = candidates.length > 0 ? candidates : fallback;
-    
-    if (listToUse.length > 0) {
-        let choice = listToUse[Math.floor(Math.random() * listToUse.length)];
-        let newState = (stateGrid[choice.r][choice.c] || 'H') + ':Treasure';
-        
-        // Push the update so it saves to the backend and renders immediately
-        pushTileUpdate(choice.r + 1, choice.c + 1, newState);
-    }
-}
-    
-    // Pick a candidate, falling back to any valid fog tile if the distance check fails
-    let listToUse = candidates.length > 0 ? candidates : fallback;
-    
-    if (listToUse.length > 0) {
-        let choice = listToUse[Math.floor(Math.random() * listToUse.length)];
-        let newState = (stateGrid[choice.r][choice.c] || 'H') + ':Treasure';
-        
-        // Push the update so it saves to the backend and renders immediately
-        pushTileUpdate(choice.r + 1, choice.c + 1, newState);
-    }
-}
 
         canvas.addEventListener('click', (e) => {
             if (!currentUser) return;
