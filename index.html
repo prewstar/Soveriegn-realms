@@ -532,6 +532,7 @@
         const TERRAIN_STYLES = {
             'H_FOG': { color: '#1a202c', text: '', label: 'Deep Mist' }, 
             'P': { color: '#48bb78', text: '', label: 'Plains' },
+            'PT': { color: '#48bb78', text: '', label: 'Dirt Path' },
             'F': { color: '#2f855a', text: '🌲', label: 'Forest 🌲' },
             'M': { color: '#718096', text: '⛰️⛰️', label: 'Mountain ⛰️⛰️' },
             'H': { color: '#8d99ae', text: '⛰️', label: 'Hills ⛰️' },
@@ -1261,7 +1262,7 @@
             let st = stateGrid[r][c] || 'H';
             if (st.includes(':Cleared')) return false;
             let terr = getEffectiveTerrain(mapGrid[r][c] || 'P', st, r, c);
-            if ((terr === 'P' || terr === 'FP') && st.startsWith('U') && !st.includes(':Farm') && !st.includes(':Road') && !st.includes(':House') && !st.includes(':Lane')) {
+            if ((terr === 'P' || terr === 'FP' || terr === 'PT') && st.startsWith('U') && !st.includes(':Farm') && !st.includes(':Road') && !st.includes(':House') && !st.includes(':Lane')) {
                 const dirs = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
                 for (let d of dirs) {
                     let nr = r + d[0]; let nc = c + d[1];
@@ -1735,6 +1736,35 @@
             }
         }
 
+        function drawSmartPath(x, y, r, c) {
+            // Helper to check if a neighbor is a Path, Town, or Capital
+            const isPathOrTown = (nr, nc) => {
+                if (nr < 0 || nr >= GRID_UNITS || nc < 0 || nc >= GRID_UNITS) return false;
+                let raw = mapGrid[nr][nc];
+                let eff = getEffectiveTerrain(raw, stateGrid[nr][nc], nr, nc);
+                return eff === 'PT' || eff === 'T' || eff === 'C'; 
+                };
+
+                let rTop = isPathOrTown(r-1, c);
+                let rBot = isPathOrTown(r+1, c);
+                let rLeft = isPathOrTown(r, c-1);
+                let rRight = isPathOrTown(r, c+1);
+
+                ctx.fillStyle = '#718096'; // Grey dirt color
+                let thick = 8; // Slightly thinner than a road (10) so roads cover it cleanly
+                let offset = (TILE_SIZE - thick) / 2; 
+                let half = TILE_SIZE / 2;
+        
+                // Draw center square
+                ctx.fillRect(x + offset, y + offset, thick, thick);
+    
+                // Draw arms connecting to neighbors
+                if (rTop) ctx.fillRect(x + offset, y, thick, half);
+                if (rBot) ctx.fillRect(x + offset, y + half, thick, half);
+                if (rLeft) ctx.fillRect(x, y + offset, half, thick);
+                if (rRight) ctx.fillRect(x + half, y + offset, half, thick);
+            }
+
         function renderMap() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.lineWidth = 1;
@@ -1758,6 +1788,7 @@
                         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
 
                         if (effTerr === 'R' || effTerr === 'RBD' || effTerr === 'DR' || effTerr === 'TOD') drawSmartRiver(x, y, r, c);
+                        if (effTerr === 'PT') drawSmartPath(x, y, r, c);
 
                         if (currentStyle.text) {
                             ctx.fillStyle = "#ffffff";
@@ -1788,6 +1819,7 @@
                         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
 
                         if (effTerr === 'R' || effTerr === 'RBD' || effTerr === 'DR' || effTerr === 'TOD') drawSmartRiver(x, y, r, c);
+                        if (effTerr === 'PT') drawSmartPath(x, y, r, c);
                         
                         if (state.includes(':Road')) drawSmartRoad(x, y, r, c, false);
                         if (state.includes(':Lane')) drawSmartRoad(x, y, r, c, true);
@@ -1804,7 +1836,7 @@
                         
                         let stP = stateGrid[r][c] || '';
                         let terrP = getEffectiveTerrain(mapGrid[r][c] || 'P', stP, r, c);
-                        if ((terrP === 'P' || terrP === 'FP') && stP.startsWith('U') && !stP.includes(':Farm') && !stP.includes(':Road') && !stP.includes(':House') && !stP.includes(':Lane')) {
+                        if ((terrP === 'P' || terrP === 'FP' || terrP === 'PT') && stP.startsWith('U') && !stP.includes(':Farm') && !stP.includes(':Road') && !stP.includes(':House') && !stP.includes(':Lane')) {
                             const dirsP = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
                             for (let d of dirsP) {
                                 let nrP = r + d[0]; let ncP = c + d[1];
@@ -1991,12 +2023,12 @@
                         } else if (actionKey === 'Cleared') {
                             if (capitalTier < 3 || ptTerr !== 'F' || ptSt.includes(':Planted')) valid = false;
                         } else if (actionKey === 'Planted') {
-                            if (capitalTier < 3 || (ptTerr !== 'P' && ptTerr !== 'FP') || ptSt.includes(':Cleared') || isWheatField(pt.r, pt.c)) valid = false;
+                            if (capitalTier < 3 || (ptTerr !== 'P' && ptTerr !== 'FP' && ptTerr !== 'PT') || ptSt.includes(':Cleared') || isWheatField(pt.r, pt.c)) valid = false;
                         } else {
                             // Standard Buildings Validation
                             if (!canAttachToNetwork(pt.r, pt.c) && actionKey !== 'Dam' && actionKey !== 'Boat') valid = false; 
                             if (actionKey === 'House' && ptTerr !== 'BA') valid = false;
-                            if ((actionKey === 'LumberMill' || actionKey === 'Farm') && (ptTerr !== 'P' && ptTerr !== 'FP')) valid = false;
+                            if ((actionKey === 'LumberMill' || actionKey === 'Farm') && (ptTerr !== 'P' && ptTerr !== 'FP' && ptTerr !== 'PT')) valid = false;
                             if (actionKey === 'Quarry' && ptTerr !== 'M' && ptTerr !== 'H') valid = false;
                             if (actionKey === 'Mine' && ptTerr !== 'G') valid = false;
                             if (actionKey === 'Shipyard' && !isCoastal(pt.r, pt.c)) valid = false;
@@ -2559,7 +2591,7 @@
                         actionsContainer.appendChild(btn);
                     }
                     
-                    if ((terr === 'P' || terr === 'FP')) {
+                    if ((terr === 'P' || terr === 'FP' || terr === 'PT')) {
                         let cost = COSTS.terraform;
                         let btn = document.createElement('button'); btn.style.backgroundColor = '#2f855a'; 
                         let tierTxt = capitalTier < 3 ? ` <span style="color:#fc8181">(Lvl 3 Cap Req)</span>` : '';
@@ -2623,7 +2655,7 @@
                     }
                     
                     if (terr === 'BA') createBuildBtn(actionsContainer, 'Erect Tenement House', 'wood', COSTS.house, 'House', canAttach, baseStateStr, 0, 1, 'House', null, 1);
-                    if ((terr === 'P' || terr === 'FP')) {
+                    if ((terr === 'P' || terr === 'FP' || terr === 'PT')) {
                         createBuildBtn(actionsContainer, 'Construct Lumber Mill', 'wood', COSTS.lumbermill, 'LumberMill', canAttach, baseStateStr, WORKFORCE_COSTS.LumberMill, 0, 'LumberMill', null, 1);
                         createBuildBtn(actionsContainer, 'Build Wheat Farm', 'wood', COSTS.farm, 'Farm', canAttach, baseStateStr, WORKFORCE_COSTS.Farm, 0, 'Farm', null, 1);
                     }
