@@ -533,6 +533,7 @@
             'H_FOG': { color: '#1a202c', text: '', label: 'Deep Mist' }, 
             'P': { color: '#48bb78', text: '', label: 'Plains' },
             'PT': { color: '#48bb78', text: '', label: 'Dirt Path' },
+            'FPT': { color: '#2f855a', text: '🌲', label: 'Forest Path 🌲' },
             'F': { color: '#2f855a', text: '🌲', label: 'Forest 🌲' },
             'M': { color: '#718096', text: '⛰️⛰️', label: 'Mountain ⛰️⛰️' },
             'H': { color: '#8d99ae', text: '⛰️', label: 'Hills ⛰️' },
@@ -1153,7 +1154,10 @@
                 if (rawTerr === 'WBF') return 'W'; 
             }
 
-            if (st.includes(':Cleared')) return 'P';
+            if (st.includes(':Cleared')) {
+                if (rawTerr === 'FPT') return 'PT'; // Forest Path becomes a regular Path when cleared
+                return 'P';
+            }
             if (st.includes(':Planted')) return 'F';
             if (st.includes(':ExpandedBA')) return 'BA';
             
@@ -1324,7 +1328,8 @@
                 let nr = r + d[0]; let nc = c + d[1];
                 if (nr >= 0 && nr < GRID_UNITS && nc >= 0 && nc < GRID_UNITS) {
                     let nSt = stateGrid[nr][nc] || 'H';
-                    if (nSt.startsWith('U') && getEffectiveTerrain(mapGrid[nr][nc], nSt, nr, nc) === 'F') fCount += nSt.includes(':Road') ? 0.5 : 1;
+                    let eff = getEffectiveTerrain(mapGrid[nr][nc], nSt, nr, nc);
+                    if (nSt.startsWith('U') && (eff === 'F' || eff === 'FPT')) fCount += nSt.includes(':Road') ? 0.5 : 1;
                 }
             }
             if (hiredTravellers.includes('WM')) fCount += 1;
@@ -1742,8 +1747,8 @@
                 if (nr < 0 || nr >= GRID_UNITS || nc < 0 || nc >= GRID_UNITS) return false;
                 let raw = mapGrid[nr][nc];
                 let eff = getEffectiveTerrain(raw, stateGrid[nr][nc], nr, nc);
-                return eff === 'PT' || eff === 'T' || eff === 'C'; 
-                };
+                return eff === 'PT' || eff === 'FPT' || eff === 'T' || eff === 'C' || eff === 'BA'; 
+             };
 
                 let rTop = isPathOrTown(r-1, c);
                 let rBot = isPathOrTown(r+1, c);
@@ -1788,7 +1793,12 @@
                         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
 
                         if (effTerr === 'R' || effTerr === 'RBD' || effTerr === 'DR' || effTerr === 'TOD') drawSmartRiver(x, y, r, c);
-                        if (effTerr === 'PT') drawSmartPath(x, y, r, c);
+                        let isGrain = isWheatField(r, c);
+                        let hasStructure = state.includes(':Farm') || state.includes(':LumberMill') || state.includes(':Quarry') || state.includes(':Mine') || state.includes(':House');
+
+                        if ((effTerr === 'PT' || effTerr === 'FPT') && !hasStructure && !isGrain) {
+                            drawSmartPath(x, y, r, c);
+                        }
 
                         if (currentStyle.text) {
                             ctx.fillStyle = "#ffffff";
@@ -1819,7 +1829,12 @@
                         ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
 
                         if (effTerr === 'R' || effTerr === 'RBD' || effTerr === 'DR' || effTerr === 'TOD') drawSmartRiver(x, y, r, c);
-                        if (effTerr === 'PT') drawSmartPath(x, y, r, c);
+                        let isGrain = isWheatField(r, c);
+                        let hasStructure = state.includes(':Farm') || state.includes(':LumberMill') || state.includes(':Quarry') || state.includes(':Mine') || state.includes(':House');
+
+                        if ((effTerr === 'PT' || effTerr === 'FPT') && !hasStructure && !isGrain) {
+                            drawSmartPath(x, y, r, c);
+                        }
                         
                         if (state.includes(':Road')) drawSmartRoad(x, y, r, c, false);
                         if (state.includes(':Lane')) drawSmartRoad(x, y, r, c, true);
@@ -2021,7 +2036,7 @@
                         } else if (actionKey === 'Lane') {
                             if (capitalTier < 5 || (!['W','WF','WBF','DW','WA','FL','L'].includes(ptTerr))) valid = false;
                         } else if (actionKey === 'Cleared') {
-                            if (capitalTier < 3 || ptTerr !== 'F' || ptSt.includes(':Planted')) valid = false;
+                            if (capitalTier < 3 || (ptTerr !== 'F' && ptTerr !== 'FPT') || ptSt.includes(':Planted')) valid = false;
                         } else if (actionKey === 'Planted') {
                             if (capitalTier < 3 || (ptTerr !== 'P' && ptTerr !== 'FP' && ptTerr !== 'PT') || ptSt.includes(':Cleared') || isWheatField(pt.r, pt.c)) valid = false;
                         } else {
@@ -2563,7 +2578,7 @@
                     let canAttach = canAttachToNetwork(rIdx, cIdx);
                     let canAttachLane = hasLaneAdjacency(rIdx, cIdx);
                     
-                    if (terr === 'F') {
+                    if (terr === 'F' || terr === 'FPT') {
                         let cost = COSTS.terraform;
                         let btn = document.createElement('button'); btn.style.backgroundColor = '#d69e2e'; 
                         let tierTxt = capitalTier < 3 ? ` <span style="color:#fc8181">(Lvl 3 Cap Req)</span>` : '';
