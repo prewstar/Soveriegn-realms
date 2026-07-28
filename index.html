@@ -1342,6 +1342,64 @@
         }
 
         function calculateNetworks() {
+            // --- 0. CROSS-WATER SHIPYARD CONNECTIVITY ---
+            let waterBodyGrid = Array(GRID_UNITS).fill(0).map(()=>Array(GRID_UNITS).fill(0));
+            let nextWaterBodyId = 1;
+            let waterBodyShipyards = {};
+
+            // Identify discrete bodies of water
+            for (let r=0; r<GRID_UNITS; r++) {
+                for (let c=0; c<GRID_UNITS; c++) {
+                    if (waterBodyGrid[r][c] === 0) {
+                        let terr = getEffectiveTerrain(mapGrid[r][c], stateGrid[r][c], r, c);
+                        if (isWaterType(terr)) {
+                            let q = [{r,c}];
+                            waterBodyGrid[r][c] = nextWaterBodyId;
+                            waterBodyShipyards[nextWaterBodyId] = [];
+                            
+                            while(q.length > 0) {
+                                let wcurr = q.shift();
+                                for (let d of [[-1,0],[1,0],[0,-1],[0,1]]) {
+                                    let nr = wcurr.r + d[0], nc = wcurr.c + d[1];
+                                    if (nr>=0 && nr<GRID_UNITS && nc>=0 && nc<GRID_UNITS) {
+                                        if (waterBodyGrid[nr][nc] === 0) {
+                                            let nTerr = getEffectiveTerrain(mapGrid[nr][nc], stateGrid[nr][nc], nr, nc);
+                                            if (isWaterType(nTerr)) {
+                                                waterBodyGrid[nr][nc] = nextWaterBodyId;
+                                                q.push({r: nr, c: nc});
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            nextWaterBodyId++;
+                        }
+                    }
+                }
+            }
+
+            // Map all Shipyards to the water bodies they touch
+            let globalShipyards = [];
+            for (let r=0; r<GRID_UNITS; r++) {
+                for (let c=0; c<GRID_UNITS; c++) {
+                    if (stateGrid[r][c] && stateGrid[r][c].includes(':Shipyard')) {
+                        let touching = new Set();
+                        for (let d of [[-1,0],[1,0],[0,-1],[0,1]]) {
+                            let nr = r + d[0], nc = c + d[1];
+                            if (nr>=0 && nr<GRID_UNITS && nc>=0 && nc<GRID_UNITS && waterBodyGrid[nr][nc] > 0) {
+                                touching.add(waterBodyGrid[nr][nc]);
+                            }
+                        }
+                        globalShipyards.push({r, c, touching: Array.from(touching)});
+                    }
+                }
+            }
+
+            globalShipyards.forEach(sy => {
+                sy.touching.forEach(id => {
+                    if (waterBodyShipyards[id]) waterBodyShipyards[id].push(sy);
+                });
+            });
             // --- 1. FLOOD FILL LOGIC ---
             tracker.floodedRivers = Array(GRID_UNITS).fill(0).map(()=>Array(GRID_UNITS).fill(false));
             let riverQueue = [];
@@ -1428,6 +1486,29 @@
                         visited[pair.r][pair.c] = true;
                         networkGrid[pair.r][pair.c] = true;
                         netQueue.push({r: pair.r, c: pair.c});
+                    }
+                }
+
+                // --- SHIPYARD WATER JUMPS ---
+                let st = stateGrid[curr.r][curr.c];
+                if (st && st.includes(':Shipyard')) {
+                    let syObj = globalShipyards.find(s => s.r === curr.r && s.c === curr.c);
+                    if (syObj) {
+                        syObj.touching.forEach(wbId => {
+                            let group = waterBodyShipyards[wbId];
+                            // Base 10 spaces + 1 space for every additional shipyard in this water body!
+                            let maxDist = 10 + Math.max(0, group.length - 1);
+                            group.forEach(otherSy => {
+                                if (!visited[otherSy.r][otherSy.c]) {
+                                    let dist = Math.max(Math.abs(otherSy.r - curr.r), Math.abs(otherSy.c - curr.c));
+                                    if (dist <= maxDist) {
+                                        visited[otherSy.r][otherSy.c] = true;
+                                        networkGrid[otherSy.r][otherSy.c] = true;
+                                        netQueue.push({r: otherSy.r, c: otherSy.c});
+                                    }
+                                }
+                            });
+                        });
                     }
                 }
 
@@ -1878,7 +1959,7 @@
                         let rawTerr = mapGrid[pt.r][pt.c];
                         
                         // Handle special quick-actions first
-                        if (actionKey.startsWith('Demolish')) {
+                        if (actionKey === 'Demolish') { let hasDemolishable = Object.keys(DEMOLISH_MAP).some(t => ptSt.includes(':'+t)); if (hasDemolishable) toBuild.push(pt); continue; }
                             let targetTag = actionKey.replace('Demolish', '');
                             if (ptSt.includes(`:${targetTag}`)) toBuild.push(pt);
                             continue; // Skip standard building checks
@@ -1923,20 +2004,25 @@
                     // EXECUTION PHASE
                     if (valid && toBuild.length > 0) {
                         
-                        if (actionKey.startsWith('Demolish')) {
-                            let targetTag = actionKey.replace('Demolish', '');
-                            let info = DEMOLISH_MAP[targetTag];
-                            if (!info) return;
-                            
-                            let totalRefund = toBuild.length * info.refund;
-                            resources[info.res] += totalRefund;
-                            
-                            let resName = info.res === 'gold' ? 'Gold' : info.res === 'wood' ? 'Wood' : 'Stone';
-                            spawnFloatingText(`+${totalRefund} ${resName}`, e.clientX, e.clientY, '#f6e05e');
-                            
+                        // NEW UNIVERSAL DEMOLISH
+                        if (actionKey === 'Demolish') {
                             toBuild.forEach(pt => {
                                 let ptSt = stateGrid[pt.r][pt.c];
-                                pushTileUpdate(pt.r + 1, pt.c + 1, ptSt.replace(`:${targetTag}`, ''), actionKey);
+                                let newSt = ptSt;
+                                
+                                // Collect all demolishable tags on this tile
+                                let tagsToDemolish = Object.keys(DEMOLISH_MAP).filter(t => ptSt.includes(`:${t}`));
+                                
+                                tagsToDemolish.forEach((t, i) => {
+                                    let info = DEMOLISH_MAP[t];
+                                    resources[info.res] += info.refund;
+                                    newSt = newSt.replace(`:${t}`, '');
+                                    
+                                    let resName = info.res === 'gold' ? 'Gold' : info.res === 'wood' ? 'Wood' : 'Stone';
+                                    // Stagger the text slightly if they demolished 2 things at once
+                                    setTimeout(() => spawnFloatingText(`+${info.refund} ${resName}`, e.clientX, e.clientY - (i*20), '#f6e05e'), i * 100);
+                                });
+                                pushTileUpdate(pt.r + 1, pt.c + 1, newSt, actionKey);
                             });
                             lastAnchorTile = { r: rIdx, c: cIdx, type: actionKey }; 
                             return;
@@ -2293,6 +2379,7 @@
                 else if (terr === 'FWD') infoText = `Impenetrable Wolf Den`;
                 else if (rawTerr === 'WBF' && !state.includes(':Looted')) infoText = `Yields Fish on Tap`;
                 else if (state.includes(':Stocked')) infoText = `Stocked with Fish (Yields +1 Food to adjacent boats)`;
+                else if (rawTerr === 'MCR' && state.includes(':Looted')) infoText = `Looted`;
                 
                 let hasBuilding = state.includes(':Farm') || state.includes(':LumberMill') || state.includes(':Quarry') || state.includes(':Mine') || state.includes(':House') || state.includes(':Shipyard') || state.includes(':Boat') || state.includes(':Stocked') || terr === 'T' || terr === 'BA';
                 
@@ -2479,12 +2566,12 @@
                         actionsContainer.appendChild(btn);
                     }
                     
-                    if (!isWaterType(terr) && !isRiverType(terr) && !['FWD', 'WH', 'MCR', 'PG', 'H', 'M', 'I', 'BA', 'T'].includes(rawTerr) && !isAlienSlime(rawTerr, state)) {
+                    if (!isWaterType(terr) && !isRiverType(terr) && !['FWD', 'WH', 'MCR', 'PG', 'H', 'M', 'I', 'BA', 'T'].includes(terr) && !isAlienSlime(rawTerr, state)) {
                         createBuildBtn(actionsContainer, 'Build Access Road', 'gold', COSTS.road, 'Road', canAttach, baseStateStr, 0, 0, 'Road', null, 1);
                     }
                     
                     if (rawTerr === 'DR' && !state.includes(':Dam')) {
-                        createBuildBtn(actionsContainer, 'Build Dam', 'wood', 50, 'Dam', canAttach, baseStateStr, 0, 0, null, null, 2);
+                        createBuildBtn(actionsContainer, 'Build Dam', 'wood', 50, 'Dam', canAttach, baseStateStr, 0, 0, 'Dam', null, 2);
                     }
 
                     if (isRiverType(terr) && !state.includes(':Dam')) {
@@ -2493,14 +2580,13 @@
                     }
                     
                     if (terr === 'FL' && !state.includes(':Stocked')) {
-                        createBuildBtn(actionsContainer, 'Stock Fish (1 🐟)', 'fish', 1, 'Stocked', true, baseStateStr, 0, 0, null, capitalTier < 5 ? "Requires Tier 5 Capital" : null, 5);
+                        createBuildBtn(actionsContainer, 'Stock Fish (1 🐟)', 'fish', 1, 'Stocked', true, baseStateStr, 0, 0, 'Stocked', capitalTier < 5 ? "Requires Tier 5 Capital" : null, 5);
                     }
 
                     if (isWaterType(terr) && !isRiverType(terr)) {
                         let coastal = isCoastal(rIdx, cIdx);
-                        // Only render the Shipyard button if it is a coastal tile
                         if (coastal) {
-                            createBuildBtn(actionsContainer, 'Build Shipyard', 'wood', COSTS.shipyard, 'Shipyard', canAttach, baseStateStr, WORKFORCE_COSTS.Shipyard, 0, null, null, 5);
+                            createBuildBtn(actionsContainer, 'Build Shipyard', 'wood', COSTS.shipyard, 'Shipyard', canAttach, baseStateStr, WORKFORCE_COSTS.Shipyard, 0, 'Shipyard', null, 5);
                         }
                         createBuildBtn(actionsContainer, 'Establish Shipping Lane', 'gold', COSTS.lane, 'Lane', canAttachLane, baseStateStr, 0, 0, 'Lane', null, 5);
                         
@@ -2511,7 +2597,6 @@
                             btn.style.backgroundColor = '#3182ce';
                             btn.innerHTML = `Deploy Stored Boat (1 ⛵) | <span class="${workforce.used + WORKFORCE_COSTS.Boat > workforce.max ? 'req-missing' : ''}">-${WORKFORCE_COSTS.Boat} WF</span>`;
                             
-                            // Apply strict validations to deploying stored boats
                             if (workforce.used + WORKFORCE_COSTS.Boat > workforce.max) {
                                 btn.disabled = true; btn.title = "Insufficient Workforce capacity.";
                             } else if (!boatCheck.allowed) {
@@ -2522,22 +2607,21 @@
                             
                             btn.onclick = () => {
                                 resources.storedBoats--;
-                                pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Boat', 'Boat');
+                                pushTileUpdate(selectedTile.row, selectedTile.col, baseStateStr + ':Boat', 'Boat'); // Action type added!
                             };
                             actionsContainer.appendChild(btn);
                         } else if (!state.includes(':Boat')) {
-                            // Apply strict validations to building new boats
-                            createBuildBtn(actionsContainer, 'Build Fishing Boat', 'wood', COSTS.boat, 'Boat', true, baseStateStr, WORKFORCE_COSTS.Boat, 0, null, !boatCheck.allowed ? boatCheck.reason : null, 5);
+                            createBuildBtn(actionsContainer, 'Build Fishing Boat', 'wood', COSTS.boat, 'Boat', true, baseStateStr, WORKFORCE_COSTS.Boat, 0, 'Boat', !boatCheck.allowed ? boatCheck.reason : null, 5);
                         }
                     }
                     
-                    if (terr === 'BA') createBuildBtn(actionsContainer, 'Erect Tenement House', 'wood', COSTS.house, 'House', canAttach, baseStateStr, 0, 1, null, null, 1);
+                    if (terr === 'BA') createBuildBtn(actionsContainer, 'Erect Tenement House', 'wood', COSTS.house, 'House', canAttach, baseStateStr, 0, 1, 'House', null, 1);
                     if ((terr === 'P' || terr === 'FP')) {
-                        createBuildBtn(actionsContainer, 'Construct Lumber Mill', 'wood', COSTS.lumbermill, 'LumberMill', canAttach, baseStateStr, WORKFORCE_COSTS.LumberMill, 0, null, null, 1);
-                        createBuildBtn(actionsContainer, 'Build Wheat Farm', 'wood', COSTS.farm, 'Farm', canAttach, baseStateStr, WORKFORCE_COSTS.Farm, 0, null, null, 1);
+                        createBuildBtn(actionsContainer, 'Construct Lumber Mill', 'wood', COSTS.lumbermill, 'LumberMill', canAttach, baseStateStr, WORKFORCE_COSTS.LumberMill, 0, 'LumberMill', null, 1);
+                        createBuildBtn(actionsContainer, 'Build Wheat Farm', 'wood', COSTS.farm, 'Farm', canAttach, baseStateStr, WORKFORCE_COSTS.Farm, 0, 'Farm', null, 1);
                     }
-                    if (terr === 'M' || terr === 'H') createBuildBtn(actionsContainer, 'Establish Stone Quarry', 'stone', COSTS.quarry, 'Quarry', canAttach, baseStateStr, WORKFORCE_COSTS.Quarry, 0, null, null, 1);
-                    if (terr === 'G') createBuildBtn(actionsContainer, 'Establish Gold Mine', 'wood', COSTS.goldmine, 'Mine', canAttach, baseStateStr, WORKFORCE_COSTS.Mine, 0, null, null, 3);
+                    if (terr === 'M' || terr === 'H') createBuildBtn(actionsContainer, 'Establish Stone Quarry', 'stone', COSTS.quarry, 'Quarry', canAttach, baseStateStr, WORKFORCE_COSTS.Quarry, 0, 'Quarry', null, 1);
+                    if (terr === 'G') createBuildBtn(actionsContainer, 'Establish Gold Mine', 'wood', COSTS.goldmine, 'Mine', canAttach, baseStateStr, WORKFORCE_COSTS.Mine, 0, 'Mine', null, 3);
                     
                 }
                 
@@ -2564,7 +2648,7 @@
                             resources[info.res] += info.refund;
                             let newState = state.replace(':' + tag, '');
                             // If it's a road, activate the Quick 'DemolishRoad' action
-                            let quickAction = `Demolish${tag}`; 
+                            let quickAction = 'Demolish'; 
                             pushTileUpdate(selectedTile.row, selectedTile.col, newState, quickAction);
                             updateResourceUI();
                         };
