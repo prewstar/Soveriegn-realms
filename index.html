@@ -545,7 +545,7 @@
             'RBD': { color: '#48bb78', text: '🪵', label: 'Beaver Dam' },
             'FP': { color: '#50bb70', text: '', label: 'Flood Plain' },
             'FL': { color: '#3182ce', text: '', label: 'Flooded Lake' }, 
-            'TOD': { color: '#3182ce', text: '', label: 'River' },
+            'TOD': { color: '#48bb78', text: '', label: 'River' },
             'C': { color: '#9f7aea', text: '🏰', label: 'Capital Center 🏰' },
             'T': { color: '#b794f4', text: '🏘️', label: 'Town 🏘️' },
             'BA': { color: '#DBD370', text: '🍂', label: 'Build Area' },
@@ -995,7 +995,8 @@
                 fabQuest.style.backgroundColor = '#48bb78';
             } else {
                 fabQuest.style.backgroundColor = '#2d2d3d';
-            }let html = `<p class="narrative">"${q.narrative}"</p>`;
+            }
+            let html = `<p class="narrative">"${q.narrative}"</p>`;
             
             // Only show the actual goal and tips if the quest is NOT completed yet
             if (!completed) {
@@ -1959,11 +1960,17 @@
                         let rawTerr = mapGrid[pt.r][pt.c];
                         
                         // Handle special quick-actions first
-                        if (actionKey === 'Demolish') { let hasDemolishable = Object.keys(DEMOLISH_MAP).some(t => ptSt.includes(':'+t)); if (hasDemolishable) toBuild.push(pt); continue; }
+                        if (actionKey.startsWith('Demolish')) {
+                            if (actionKey === 'Demolish') { 
+                                let hasDemolishable = Object.keys(DEMOLISH_MAP).some(t => ptSt.includes(':'+t)); 
+                                if (hasDemolishable) toBuild.push(pt); 
+                                continue; 
+                            }
                             let targetTag = actionKey.replace('Demolish', '');
                             if (ptSt.includes(`:${targetTag}`)) toBuild.push(pt);
                             continue; // Skip standard building checks
                         }
+                        
                         if (actionKey === 'StowBoat') {
                             if (ptSt.includes(':Boat')) toBuild.push(pt);
                             continue;
